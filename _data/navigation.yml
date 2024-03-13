@@ -12,7 +12,7 @@ main:
   # - title: "Projects"
   #   url: /projects/
 
-  - title: "Categories"
+  - title: "categories"
     url: /categories/
 
 # sidebar navigation (categories)
@@ -24,6 +24,7 @@ categories:
         url: /categories/microeconomics
       - title: "컴퓨터 아키텍쳐"
         url: /categories/architecture
+
   - title: "리트코드/백준"
     url: /categories/ltcbjn
 
