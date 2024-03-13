@@ -1,9 +1,9 @@
 ---
-title: "Categories1"
+title: "미시경제학"
 layout: category
-permalink: /categories/categories1/
+permalink: /categories/microeconomics/
 author_profile: true
-taxonomy: Categories1
+taxonomy: microeconomics
 sidebar:
   nav: "categories"
 ---

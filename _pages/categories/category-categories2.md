@@ -1,9 +1,9 @@
 ---
-title: "Categories2"
+title: "리트코드/백준"
 layout: category
-permalink: /categories/categories2/
+permalink: /categories/ltcbjn/
 author_profile: true
-taxonomy: Categories2
+taxonomy: ltcbjn
 sidebar:
   nav: "categories"
 ---
