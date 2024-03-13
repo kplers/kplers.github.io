@@ -1,9 +1,9 @@
 ---
-title: "미시경제학"
+title: "KnowHow Archive - 미시경제학"
 layout: category
 permalink: /categories/microeconomics/
 author_profile: true
-taxonomy: microeconomics
+taxonomy: 미시경제학
 sidebar:
   nav: "categories"
 ---

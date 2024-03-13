@@ -18,15 +18,11 @@ main:
 # sidebar navigation (categories)
 # 2022.02.15 sidebar update : simple ver.
 categories:
-  - title: "KnowHow Archive"
-    children:
-      - title: "미시경제학"
-        url: /categories/microeconomics
-      - title: "컴퓨터 아키텍쳐"
-        url: /categories/architecture
+  - title: "2024S KnowHow Archive - 미시경제학"
+    url: /categories/microeconomics
+  - title: "2024S KnowHow Archive - 컴퓨터 아키텍쳐"
+    url: /categories/architecture
 
-  - title: "ALGORITHM"
-    children:
-      - title: "리트코드/백준"
-        url: /categories/ltcbjn
+  - title: "리트코드/백준"
+    url: /categories/ltcbjn
 
