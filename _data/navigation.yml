@@ -18,9 +18,9 @@ main:
 # sidebar navigation (categories)
 # 2022.02.15 sidebar update : simple ver.
 categories:
-  - title: "2024S KnowHow Archive - 미시경제학"
+  - title: "KnowHow Archive - 미시경제학"
     url: /categories/microeconomics
-  - title: "2024S KnowHow Archive - 컴퓨터 아키텍쳐"
+  - title: "KnowHow Archive - 컴퓨터 아키텍쳐"
     url: /categories/architecture
 
   - title: "리트코드/백준"
