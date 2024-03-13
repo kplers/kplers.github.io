@@ -25,6 +25,8 @@ categories:
       - title: "컴퓨터 아키텍쳐"
         url: /categories/architecture
 
-  - title: "리트코드/백준"
-    url: /categories/ltcbjn
+  - title: "ALGORITHM"
+    children:
+      - title: "리트코드/백준"
+        url: /categories/ltcbjn
 
