@@ -22,6 +22,8 @@ categories:
     children:
       - title: "미시경제학"
         url: /categories/microeconomics
+      - title: "컴퓨터 아키텍쳐"
+        url: /categories/architecture
   - title: "리트코드/백준"
     url: /categories/ltcbjn
 
