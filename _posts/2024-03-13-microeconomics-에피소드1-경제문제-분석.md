@@ -3,9 +3,9 @@ title: "에피소드1: 경제문제 분석"
 excerpt: "미시경제학 요약 노트 에피소드 1은 경제문제 분석 방법에 대해 정리해 봅니다."
 
 categories:
-  - KnowHow Archive - 미시경제학
+  - "KnowHow Archive - 미시경제학"
 tags:
-  - [미시경제학, 경제문제, 균형분석, 비교정태, 제약최적화]
+  - [미시경제학, 노하우 아카이브]
 
 permalink: /microeconomics/episode-1
 
