@@ -7,7 +7,7 @@ categories:
 tags:
   - [경제학, 미시경제학, 노하우 아카이브]
 
-permalink: /microeconomics/episode-1
+permalink: /microeconomics/episode-2
 
 toc: true
 toc_sticky: true
