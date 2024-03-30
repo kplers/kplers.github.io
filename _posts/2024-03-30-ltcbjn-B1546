@@ -1,0 +1,42 @@
+
+**문제**: 백준 1546번  
+**사용 언어**: C++  
+**문제 링크**: https://www.acmicpc.net/problem/1546
+
+## 나의 코드
+
+```c++
+#include <iostream>
+#include <vector>
+
+using namespace std;
+
+int main(){
+    int num;
+    cin >> num;
+
+    vector<int> scores {};
+    for(int i=0;i<num;i++){
+        int new_score;
+        cin >> new_score;
+        scores.push_back(new_score);
+    }
+
+    // Point 1. 평균을 구하기 위해 sum을 알아야 함.
+    // Point 2. 평균을 보정하기 위해 max_score를 알아야 함.
+    // Point 3. 새로운 평균은 sum * 100 / (num * max_score) 와 같이 구한다.
+
+    int max_score=scores[0];
+    int sum_score=scores[0];
+
+    for(int i=1;i<num;i++){
+        if(scores[i]>max_score)
+            max_score=scores[i];
+        sum_score+=scores[i];
+    }
+    cout << (double)sum_score*100/(num*max_score);
+}
+```
+
+## 코멘트
+딱히 특별한 알고리즘을 사용하는 문제는 아니었고, 그냥 문제가 요구하는 것이 뭔지 파악하면 계산해서 풀 수 있는 문제였다.
