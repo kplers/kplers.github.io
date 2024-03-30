@@ -1,4 +1,20 @@
+---
+title: "[B1546] 평균"
+excerpt: "백준 1546번 풀이 기록입니다."
 
+categories:
+  - ltcbjn
+tags:
+  - [백준, "1546", 평균, 알고리즘]
+
+permalink: /ltcbjn/b1546
+
+toc: true
+toc_sticky: true
+
+date: 2024-03-13
+last_modified_at: 2024-03-13
+---
 **문제**: 백준 1546번  
 **사용 언어**: C++  
 **문제 링크**: https://www.acmicpc.net/problem/1546
