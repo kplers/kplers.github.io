@@ -18,11 +18,13 @@ main:
 # sidebar navigation (categories)
 # 2022.02.15 sidebar update : simple ver.
 categories:
-  - title: "KnowHow Archive - 미시경제학"
-    url: /categories/microeconomics
-  - title: "KnowHow Archive - 컴퓨터 아키텍쳐"
-    url: /categories/architecture
+  - title: "Daily Diary"
+    url: /categories/diary
+  - title: "Python"
+    url: /categories/python
+  - title: "AI"
+    url: /categories/ai
 
-  - title: "리트코드/백준"
+  - title: "Problem Solving"
     url: /categories/ltcbjn
 
