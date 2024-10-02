@@ -1,9 +1,9 @@
 ---
-title: "Problem Solving"
+title: "Python"
 layout: category
-permalink: /categories/ltcbjn/
+permalink: /categories/python/
 author_profile: true
-taxonomy: ltcbjn
+taxonomy: python
 sidebar:
   nav: "categories"
 ---

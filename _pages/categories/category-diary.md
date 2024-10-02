@@ -1,9 +1,9 @@
 ---
-title: "Problem Solving"
+title: "Daily Diary"
 layout: category
-permalink: /categories/ltcbjn/
+permalink: /categories/diary/
 author_profile: true
-taxonomy: ltcbjn
+taxonomy: diary
 sidebar:
   nav: "categories"
 ---

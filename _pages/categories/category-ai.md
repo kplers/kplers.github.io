@@ -1,9 +1,9 @@
 ---
-title: "Problem Solving"
+title: "AI"
 layout: category
-permalink: /categories/ltcbjn/
+permalink: /categories/ai/
 author_profile: true
-taxonomy: ltcbjn
+taxonomy: AI
 sidebar:
   nav: "categories"
 ---
