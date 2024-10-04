@@ -1,0 +1,19 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Create Diary",
+            "type": "shell",
+            "command": "bash",
+            "args": [
+                "-c",
+                "cat <<EOT > _posts/$(date +%Y-%m-%d)-diary.md\n---\ntitle: 데일리 다이어리 - $(date +%Y-%m-%d)\nexcerpt: \n\ncategories:\n - diary\ntags:\n - [diary, 일기, 기록]\n\npermalink: /diary/$(date +%Y%m%d)\n\ntoc: true\ntoc_sticky: true\n\ndate: $(date +%Y-%m-%d)\nlast_modified_at: $(date +%Y-%m-%d)\n---\n\n## 기록\n\n\n이 포스트는 실시간으로 업데이트됩니다.\nEOT"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": []
+        }
+    ]
+}
