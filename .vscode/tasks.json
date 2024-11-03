@@ -40,6 +40,19 @@
                 "isDefault": true
             },
             "problemMatcher": []
+        },
+        {
+            "label": "Create Javascript Post",
+            "type": "shell",
+            "command": "python",
+            "args": [
+                "${workspaceFolder}/create_js_post.py"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": []
         }
     ]
 }
