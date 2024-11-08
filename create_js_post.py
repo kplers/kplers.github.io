@@ -24,7 +24,7 @@ new_post_path = os.path.join(posts_folder, new_post_filename)
 
 # 파일 내용 템플릿
 new_post_content = f"""---
-title: "[자바스크립트] 에피소드{next_number}: "
+title: "JS-{next_number}: "
 excerpt: ""
 
 categories:

@@ -24,7 +24,7 @@ new_post_path = os.path.join(posts_folder, new_post_filename)
 
 # 파일 내용 템플릿
 new_post_content = f"""---
-title: "[심화 파이썬] 에피소드{next_number}: "
+title: "Py-{next_number}: "
 excerpt: ""
 
 categories:
