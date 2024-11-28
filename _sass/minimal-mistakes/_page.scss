@@ -642,9 +642,10 @@ body {
 }
 
 .copy-code-button:hover {
-  background-color: #0f1214;
+  background-color: #e5e6e7;
 }
 
 .copy-code-image {
-  filter: invert(1);
+  margin: 0;
+  display: block;
 }

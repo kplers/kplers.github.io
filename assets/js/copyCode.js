@@ -18,7 +18,7 @@ const codeBlocks = document.querySelectorAll(
       }
   
       id = setTimeout(() => {
-        img.src = "/assets/images/copy.png";
+        img.src = "/assets/images/copy.jpg";
       }, 2000);
     });
   });
