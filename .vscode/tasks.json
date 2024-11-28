@@ -53,6 +53,19 @@
                 "isDefault": true
             },
             "problemMatcher": []
+        },
+        {
+            "label": "Create React Post",
+            "type": "shell",
+            "command": "python",
+            "args": [
+                "${workspaceFolder}/create_react_post.py"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": []
         }
     ]
 }
