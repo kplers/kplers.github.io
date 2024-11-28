@@ -18,6 +18,8 @@ main:
 # sidebar navigation (categories)
 # 2022.02.15 sidebar update : simple ver.
 categories:
+  - title: "General"
+    url: /categories/general
   - title: "Daily Diary"
     url: /categories/diary
   - title: "Python"
@@ -28,4 +30,5 @@ categories:
     url: /categories/ltcbjn
   - title: "Javascript"
     url: /categories/js
+
 
