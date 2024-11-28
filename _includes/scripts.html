@@ -1,72 +1,28 @@
 {% if site.footer_scripts %}
-{% for script in site.footer_scripts %}
-<script src="{{ script | relative_url }}"></script>
-{% endfor %}
+  {% for script in site.footer_scripts %}
+    <script src="{{ script | relative_url }}"></script>
+  {% endfor %}
 {% else %}
-<script src="{{ '/assets/js/main.min.js' | relative_url }}"></script>
+  <script src="{{ '/assets/js/main.min.js' | relative_url }}"></script>
 {% endif %}
 
 {% if site.search == true or page.layout == "search" %}
-{%- assign search_provider = site.search_provider | default: "lunr" -%}
-{%- case search_provider -%}
-{%- when "lunr" -%}
-{% include_cached search/lunr-search-scripts.html %}
-{%- when "google" -%}
-{% include_cached search/google-search-scripts.html %}
-{%- when "algolia" -%}
-{% include_cached search/algolia-search-scripts.html %}
-{%- endcase -%}
+  {%- assign search_provider = site.search_provider | default: "lunr" -%}
+  {%- case search_provider -%}
+    {%- when "lunr" -%}
+      {% include_cached search/lunr-search-scripts.html %}
+    {%- when "google" -%}
+      {% include_cached search/google-search-scripts.html %}
+    {%- when "algolia" -%}
+      {% include_cached search/algolia-search-scripts.html %}
+  {%- endcase -%}
 {% endif %}
 
 {% include analytics.html %}
 {% include /comments-providers/scripts.html %}
 
 {% if site.after_footer_scripts %}
-{% for script in site.after_footer_scripts %}
-<script src="{{ script | relative_url }}"></script>
-{% endfor %}
+  {% for script in site.after_footer_scripts %}
+    <script src="{{ script | relative_url }}"></script>
+  {% endfor %}
 {% endif %}
-<!-- _includes/scripts.html 파일에 추가할 코드 -->
-<script>
-  document.addEventListener('DOMContentLoaded', function () {
-    // 모든 코드 블록에 복사 버튼 추가
-    document.querySelectorAll('pre.highlight').forEach(function (codeBlock) {
-      // 복사 버튼 생성
-      var copyButton = document.createElement('button');
-      copyButton.className = 'copy-button';
-      copyButton.textContent = 'Copy';
-
-      // 버튼 스타일링
-      copyButton.style.position = 'absolute';
-      copyButton.style.right = '0';
-      copyButton.style.top = '0';
-      copyButton.style.padding = '4px 8px';
-      copyButton.style.margin = '5px';
-      copyButton.style.fontSize = '0.8em';
-      copyButton.style.background = '#e9ecef';
-      copyButton.style.border = '1px solid #ccc';
-      copyButton.style.borderRadius = '3px';
-      copyButton.style.cursor = 'pointer';
-
-      // 코드 블록의 컨테이너에 relative 포지셔닝 추가
-      codeBlock.style.position = 'relative';
-
-      // 복사 기능 구현
-      copyButton.addEventListener('click', function () {
-        var code = codeBlock.querySelector('code').textContent;
-        navigator.clipboard.writeText(code).then(function () {
-          // 복사 성공 표시
-          copyButton.textContent = 'Copied!';
-          setTimeout(function () {
-            copyButton.textContent = 'Copy';
-          }, 2000);
-        }).catch(function (err) {
-          console.error('Failed to copy text: ', err);
-        });
-      });
-
-      // 버튼을 코드 블록에 추가
-      codeBlock.appendChild(copyButton);
-    });
-  });
-</script>
