@@ -3,14 +3,14 @@ from datetime import datetime
 
 # _posts 폴더 경로
 posts_folder = '_posts'
-
+category = input("Input a category name.")
 # 파일 목록에서 python[#] 형식의 파일 찾기
 existing_python_posts = [
-    f for f in os.listdir(posts_folder) if 'python' in f and f.endswith('.md')
+    f for f in os.listdir(posts_folder) if category in f and f.endswith('.md')
 ]
 
 # 파일 번호 추출
-numbers = [int(f.split('python')[1].split('.')[0]) for f in existing_python_posts]
+numbers = [int(f.split(category)[1].split('.')[0]) for f in existing_python_posts]
 
 # 가장 큰 번호보다 1 큰 번호 설정
 next_number = max(numbers) + 1 if numbers else 1
@@ -19,20 +19,21 @@ next_number = max(numbers) + 1 if numbers else 1
 today = datetime.today().strftime('%Y-%m-%d')
 
 # 새 파일 경로 설정
-new_post_filename = f"{today}-python{next_number}.md"
+new_post_filename = f"{today}-{category}{next_number}.md"
 new_post_path = os.path.join(posts_folder, new_post_filename)
+
 
 # 파일 내용 템플릿
 new_post_content = f"""---
-title: "Py-{next_number}: "
+title: "{category}-{next_number}: "
 excerpt: ""
 
 categories:
   - python
 tags:
-  - [python, "fluent python", 파이썬]
+  - [{category}]
 
-permalink: /python/{next_number}
+permalink: /python/{category.lower()}{next_number}
 
 toc: true
 toc_sticky: true
@@ -52,7 +53,7 @@ ___
 
 
 
-[이전 에피소드로](/python/{next_number - 1}) [다음 에피소드로](/python/{next_number + 1})
+[이전 에피소드로](/python/{category.lower()}{next_number - 1}) [다음 에피소드로](/python/{category.lower()}{next_number + 1})
 """
 
 # 파일 생성
