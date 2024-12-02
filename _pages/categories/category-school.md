@@ -1,9 +1,9 @@
 ---
-title: "General"
+title: "Junk (School)"
 layout: category
-permalink: /categories/general/
+permalink: /categories/school/
 author_profile: true
-taxonomy: general
+taxonomy: school
 sidebar:
   nav: "categories"
 ---

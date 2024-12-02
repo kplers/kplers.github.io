@@ -1,0 +1,18 @@
+{
+    "name": "blog-image-copier",
+    "displayName": "Blog Image Copier",
+    "version": "0.0.1",
+    "engines": {
+        "vscode": "^1.95.0"
+    },
+    "activationEvents": [
+        "onLanguage:markdown"
+    ],
+    "main": "./extension.js",
+    "scripts": {
+        "package": "vsce package"
+    },
+    "dependencies": {
+        "@types/vscode": "^1.73.0"
+    }
+}

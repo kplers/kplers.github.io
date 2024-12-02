@@ -16,7 +16,7 @@
             "problemMatcher": []
         },
         {
-            "label": "Create Python Post",
+            "label": "Create Post",
             "type": "shell",
             "command": "python",
             "args": [

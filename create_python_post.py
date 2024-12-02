@@ -3,14 +3,15 @@ from datetime import datetime
 
 # _posts 폴더 경로
 posts_folder = '_posts'
-category = input("Input a category name.")
-# 파일 목록에서 python[#] 형식의 파일 찾기
-existing_python_posts = [
+main_category = input("Input a main category name. (e.g. general)")
+category = input("Input a post type name. (e.g. PyTorch)")
+# 파일 목록에서 {main_category}[#] 형식의 파일 찾기
+existing_posts = [
     f for f in os.listdir(posts_folder) if category in f and f.endswith('.md')
 ]
 
 # 파일 번호 추출
-numbers = [int(f.split(category)[1].split('.')[0]) for f in existing_python_posts]
+numbers = [int(f.split(category)[1].split('.')[0]) for f in existing_posts]
 
 # 가장 큰 번호보다 1 큰 번호 설정
 next_number = max(numbers) + 1 if numbers else 1
@@ -29,11 +30,11 @@ title: "{category}-{next_number}: "
 excerpt: ""
 
 categories:
-  - python
+  - {main_category}
 tags:
   - [{category}]
 
-permalink: /python/{category.lower()}{next_number}
+permalink: /{main_category}/{category.lower()}{next_number}
 
 toc: true
 toc_sticky: true
@@ -53,7 +54,7 @@ ___
 
 
 
-[이전 에피소드로](/python/{category.lower()}{next_number - 1}) [다음 에피소드로](/python/{category.lower()}{next_number + 1})
+[이전 에피소드로](/{main_category}/{category.lower()}{next_number - 1}) [다음 에피소드로](/{main_category}/{category.lower()}{next_number + 1})
 """
 
 # 파일 생성
