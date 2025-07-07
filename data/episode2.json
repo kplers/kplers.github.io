@@ -48,7 +48,7 @@
         },
         "end_of_act1_ep2": {
             "title": "1막 2부의 끝",
-            "content": "<p class=\"mb-6 text-lg font-bold text-center text-teal-700\">이야기는 3부에서 계속됩니다...</p>",
+            "content": "<p class=\"mb-6 text-lg font-bold text-center text-teal-700\">이야기는 2막에서 계속됩니다...</p>",
             "choices": [
                 {
                     "text": "처음부터 다시 시작하기",
