@@ -1,6 +1,891 @@
----
-layout: home
-author_profile: true
-sidebar:
-    nav: "categories"
----
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>매직: 더 개더링 - 대화형 이야기</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700&family=Roboto+Mono&family=Gowun+Batang&display=swap"
+        rel="stylesheet">
+    <!-- Chosen Palette: Calm Harmony (Stone, Teal, Amber) -->
+    <!-- Application Structure Plan: A single-page application with a main story view. User choices are presented as buttons that dynamically update the view via JavaScript, creating a "choose your own adventure" flow. A slide-in side panel serves as an on-demand lore database, triggered by clicking highlighted terms in the text to provide context without interrupting the narrative. Special sections like the "Anathalmanac" and "Flight Plan" are uniquely styled to match their in-story tone. This structure was chosen to directly translate the source's branching narrative into an intuitive interactive experience while using the side panel to manage the dense lore in a user-friendly way. -->
+    <!-- Visualization & Content Choices: 
+        - Narrative Branching: Report Info -> Story choices. Goal -> Guide user. Method -> HTML text + JS-powered buttons. Interaction -> Click button to load next story block. Justification -> Core mechanic of the source material. Library/Method -> Vanilla JS.
+        - Lore/Terminology: Report Info -> Proper nouns (Pinnacle, Drix, etc.). Goal -> Provide context. Method -> Highlighted spans, side panel. Interaction -> Click term to open panel. Justification -> Avoids information overload, deepens engagement. Library/Method -> Vanilla JS, Tailwind CSS.
+        - Sigma's Reach Data: Report Info -> Population vs. heat signature vs. actual life. Goal -> Compare conflicting data points. Method -> Bar Chart. Interaction -> Chart appears when this story section is active. Justification -> Visualizing the discrepancy is more impactful than reading it in prose. Library/Method -> Chart.js on a Canvas element.
+        - Anathalmanac/Flight Plan: Report Info -> Structured lists/logs. Goal -> Set a specific tone. Method -> Styled HTML with Tailwind, monospaced fonts. Interaction -> Static display. Justification -> Maintains the source's stylistic intent. Library/Method -> HTML/Tailwind.
+        - Notation Dialogs: Report Info -> "Mem" and "Tezzeret" notations. Goal -> Replicate source's specific interaction. Method -> Modal dialogs. Interaction -> Click special buttons to show/hide dialogs. Justification -> Faithful reproduction of the source's interactive design. Library/Method -> HTML <dialog> element, Vanilla JS.
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            background-color: #f5f5f4;
+            /* stone-100 */
+        }
+
+        .font-mono {
+            font-family: 'Roboto Mono', monospace;
+        }
+
+        .font-serif {
+            font-family: 'Gowun Batang', serif;
+        }
+
+        .content-fade-in {
+            animation: fadeIn 0.5s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .choice-button {
+            transition: all 0.2s ease-in-out;
+        }
+
+        .choice-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+        }
+
+        .lore-term {
+            cursor: pointer;
+            color: #0d9488;
+            /* teal-600 */
+            font-weight: bold;
+            border-bottom: 1px dotted #0d9488;
+            transition: color 0.2s;
+        }
+
+        .lore-term:hover {
+            color: #f59e0b;
+            /* amber-500 */
+        }
+
+        #lore-panel {
+            transition: transform 0.3s ease-in-out;
+            transform: translateX(100%);
+        }
+
+        #lore-panel.is-open {
+            transform: translateX(0);
+        }
+
+        .art-credit {
+            font-style: italic;
+            color: #78716c;
+            /* stone-500 */
+            text-align: right;
+            font-size: 0.875rem;
+            margin-top: -0.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .anathalmanac-title {
+            font-weight: bold;
+            color: #dc2626;
+            /* red-600 */
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
+        }
+
+        .flight-plan {
+            background-color: #1c1917;
+            /* stone-900 */
+            color: #a7f3d0;
+            /* emerald-200 */
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+            border: 1px solid #44403c;
+            /* stone-700 */
+        }
+
+        .flight-plan .error {
+            color: #ef4444;
+            /* red-500 */
+        }
+
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px;
+            max-height: 400px;
+        }
+
+        dialog {
+            border: none;
+            border-radius: 0.5rem;
+            box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+            padding: 0;
+            max-width: 52rem;
+            width: 90%;
+        }
+
+        dialog::backdrop {
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(2px);
+        }
+
+        .special-button {
+            background: #005e85;
+            border: 4px solid #dff6ff;
+            color: #ffffff;
+            padding: 5px 18px;
+            font-size: 15px;
+            border-radius: 12px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+
+        .tezz-button {
+            background: #404040;
+            border: 4px solid #dff6ff;
+            color: #ffffff;
+            font-family: 'Roboto Mono', monospace;
+            padding: 5px 18px;
+            font-size: 15px;
+            border-radius: 12px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+
+<body class="text-stone-800">
+
+    <main id="app-container" class="relative min-h-screen container mx-auto p-4 sm:p-6 lg:p-8 max-w-4xl">
+        <header class="text-center mb-8">
+            <h1 class="text-3xl sm:text-4xl font-bold text-stone-900">제1막</h1>
+        </header>
+        <div id="story-content" class="bg-white/50 backdrop-blur-sm p-6 sm:p-8 rounded-lg shadow-lg">
+        </div>
+    </main>
+
+    <div id="lore-panel"
+        class="fixed top-0 right-0 h-full w-full max-w-sm bg-stone-800 text-stone-200 shadow-2xl p-6 overflow-y-auto z-50">
+        <div class="flex justify-between items-center mb-4">
+            <h2 id="lore-title" class="text-2xl font-bold text-amber-400">용어 해설</h2>
+            <button id="close-lore-btn" class="text-stone-400 hover:text-white transition-colors">&times;</button>
+        </div>
+        <div id="lore-body" class="space-y-4"></div>
+    </div>
+
+    <dialog id="notation-dialog" class="p-0">
+        <div id="dialog-content" class="p-6"></div>
+    </dialog>
+
+    <script>
+        const storyData = {
+            'Revision0': {
+                title: '수정 0',
+                content: `
+                    <p class="mb-4">나는 태양이 폭발해 나를 산산조각 낼 때까지 진흙 속에 누워 있다.</p>
+                    <p class="mb-6">실패한 시간선의 끝.</p>`,
+                choices: [
+                    { text: '다시 시작하기', target: 'Revision1' }
+                ]
+            },
+            'Revision1': {
+                title: '수정 1',
+                content: `
+                    <p class="mb-4">내가 '너'를 창조한다.</p>
+                    <p class="italic text-stone-600 mb-2">'너'는 누구지?</p>
+                    <p class="mb-4">너는 내가 '나'라고 상상하는 사람이다.</p>
+                    <p class="italic text-stone-600 mb-2">그건 아무 의미도 없잖아.</p>
+                    <p class="mb-4">너는 이미 한 명의 사람이었다. 내가 너를 창조하지 않았다. 하지만 이제 너는 내가 '나'라고 상상하는 사람이 되었다.</p>
+                    <p class="italic text-stone-600 mb-2">너는 존재하지 않는 거야?</p>
+                    <p class="mb-4">나는 존재한다. 하지만 나는 '나'가 아니다. 적어도 네가 나를 상상하기 전까지는.</p>
+                    <p class="mb-4">자. 내가 도와주지. 나를 아주 복잡한 조차장의 분기기라고 상상해 봐라. 그곳에서는 기차들이 나뉘고 합쳐지고, 때로는 구덩이로 곤두박질치기도 한다.</p>
+                    <p class="mb-4">모든 선로는 결국 같은 곳으로 이어진다. 구덩이조차도 그곳으로 향한다. 하지만 그곳에 도달하기까지는 여러 길을 택할 수 있다.</p>
+                    <p class="mb-4">네가 나를 조작할 수 있도록, 나를 이런 식으로 생각해 주었으면 한다.</p>
+                    <p class="mb-4">네가 선택을 내릴 수 있도록.</p>
+                    <p class="mb-4">진실은, 나는 길을 잃었다는 것이다. 나는 그 조차장에서 아주 멀리 떨어져 있다. 그리고 나는 다시 일터로 돌아가야 한다.</p>
+                    <p class="mb-6">부디, 누군가 나를 찾도록 선택해 줄 수 있겠나?</p>`,
+                choices: [
+                    { text: '예', target: 'Revision2' },
+                    { text: '아니오', target: 'Revision0' }
+                ]
+            },
+            'Revision2': {
+                title: '수정 2 (소테라)',
+                content: `
+                    <p class="text-2xl font-bold mb-4">태양이 폭발했던 세기였다.</p>
+                    <img src="https://media.wizards.com/2025/images/daily/9agafvIDOM.webp" alt="Sothera system art" class="w-full max-w-lg mx-auto my-6 rounded-lg shadow-lg">
+                    <p class="art-credit">아트워크: Dominik Mayer</p>
+                    <p class="mb-4">그 태양의 이름은 소테라였다. 그녀는 할머니였다.</p>
+                    <p class="mb-4">수십억 년 전, 소테라는 다섯 자녀를 낳았다. 그녀의 화롯가에서 몸을 녹일 다섯 개의 세계. 오늘날 그들은 수수르 세쿤디(전 아누키), 아다지아(전 아다와), <span class="lore-term" data-lore="kavaron">카바론</span>, 에벤도, 그리고 거인 우트로스다.</p>
+                    <p class="mb-4 italic text-stone-600">(다른 자녀들도 있다. 대부분 이상한 자들이지만. 하지만 지금은 그들에게서 너를 멀리 떨어뜨려 놓겠다.)</p>
+                    <p class="mb-4">그로부터 *그렇게까지* 수십억 년이 지나지 않아, <span class="lore-term" data-lore="kavaron">카바론</span>은 손주들을 낳았다. 바로 <span class="lore-term" data-lore="kav">카브족</span>이다.</p>
+                    <p class="mb-4">그리고, 여느 아이들이 그렇듯, <span class="lore-term" data-lore="kav">카브족</span>은 어미의 마음을 아프게 했다.</p>
+                    <p class="mb-4">그들은 <span class="lore-term" data-lore="kavaron">카바론</span>을 너무 깊이 파고들어 갈가리 찢어버렸다. 자신들의 고향 세계에 농양을 터뜨린 것이다. 대륙 전체가 솟아올랐다가 그 구멍으로 주저앉거나, 아예 내려오지 못했다. <span class="lore-term" data-lore="kavaron">카바론</span>은 두 동강 났다. 오늘날 사람들은 한쪽을 '존재하는 카바론'이라 부르고 다른 쪽을 '이전의 카바론'이라 부른다. 그들의 어리석음이 낳은 참상의 핏물은 그 주위에 고리를 만들었고, 오늘날까지도 그들 위로 떨어진다. 그들은 그것을 두라누, 모르드레인 고리라고 부른다. 살인이 남긴 돌비이기 때문이다.</p>
+                    <p class="mb-4">그렇게, <span class="lore-term" data-lore="kav">카브족</span>은 그들의 어미를 죽였다. 하지만 그것은 소테라 자신에게 다가오는 죽음에 비하면 작은 죽음이었다.</p>
+                    <p class="mb-4">소테라는 너무 밝아졌다. 소테라는 너무 커졌다. 소테라의 빛은 이상하게 변했다.</p>
+                    <p class="mb-4">소테라는 정글로 잘못 들어섰다. 성간 에테르의 구름 속으로. 그리고 그녀는 그 정글을 게걸스럽게 먹어치우고 있었다. 죽음에 이를 때까지.</p>
+                    <p class="mb-4">소테라의 어느 세계에서든 밤하늘을 올려다보면, 우주 가스의 야만적인 수채화를 보게 될 것이다. 성운이 소테라 자체로 몰려들어 별을 둘러싸고, <span class="lore-term" data-lore="kav">카브족</span>이 '정원'이라 부르는 짙은 미스터리의 구름을 형성했다. 그들이 자신들의 세계를 찢어발긴 것도 무리는 아니다! 그들은 별의 피로 가득한 하늘 아래서 진화했다. 그들은 그 냄새를 맡았던 것이다.</p>
+                    <p class="mb-4">200년도 채 되지 않아, 소테라는 초신성이 될 터였다. 그 폭발은 모든 세계의 대기를 벗겨내고 정원을 우주 공간으로 날려버릴 것이다.</p>
+                    <p class="mb-4">이제 당신은 소테라가 저주받았다고 생각하기 시작할지도 모른다. 어쩌면 이곳에 거대한 악이 도사리고 있을지도. 어쩌면 소테라는 죽어서 우주를 그 비밀로부터 구원할 운명이었을지도 모른다.</p>
+                    <p class="mb-4">하지만 임박한 초신성은 거대한 재앙이다. 그리고 기념비, 특히 이상한 기념비는 항상 숭배자들을 끌어들이는 법이다.</p>
+                    <p class="mb-6">그래서, <span class="lore-term" data-lore="pinnacle">피너클</span>이 소테라에 왔다.</p>`,
+                choices: [
+                    { text: '피너클이 뭔가요?', target: 'Pinnacle' },
+                    { text: '이제 진짜 이야기를 시작하면 안 될까요?', target: 'Revision4' }
+                ]
+            },
+            'Pinnacle': {
+                title: '피너클이 뭔가요?',
+                content: `
+                    <p class="mb-4"><span class="lore-term" data-lore="pinnacle">피너클</span>은 돕기 위해 여기에 있다.</p>
+                    <p class="mb-4"><span class="lore-term" data-lore="pinnacle">피너클</span> 없이는 항성 간 여행도 없고, <span class="lore-term" data-lore="drix">드릭스</span> 없이는 <span class="lore-term" data-lore="pinnacle">피너클</span>도 없다.</p>
+                    <p class="mb-4"><span class="lore-term" data-lore="drix">드릭스</span>를 아는가?</p>
+                    <p class="italic text-stone-600 mb-4">모를 거라 생각했다. 아무도 모르니까.</p>
+                    <p class="mb-4">그리 오래되지 않은 과거에—적어도 내가 세는 시간으로는—<span class="lore-term" data-lore="drix">드릭스</span>는 영원의 기둥의 비밀을 <span class="lore-term" data-lore="pinnacle">피너클</span>에게 주었다. 기둥은 별과 별 사이를 여행하기 위해 오르는 것이다.</p>
+                    <img src="https://media.wizards.com/2025/images/daily/nvp9bjZHex.webp" alt="Eternity Column art" class="w-full max-w-lg mx-auto my-6 rounded-lg shadow-lg">
+                    <p class="art-credit">아트워크: Rovina Cai</p>
+                    <p class="mb-4">그 대가로, (기둥이나 함선 없이도 별들 사이를 <span class="lore-term" data-lore="weftwalk">씨실처럼 거닐 수 있는</span>) <span class="lore-term" data-lore="drix">드릭스</span>는 <span class="lore-term" data-lore="pinnacle">피너클</span>로부터 약속을 받았다.</p>
+                    <p class="mb-4"><span class="lore-term" data-lore="pinnacle">피너클</span>의 손이 닿는 곳에 있는 별이 죽음을 맞이할 때마다, <span class="lore-term" data-lore="pinnacle">피너클</span>이 방문하기로. 그들은 영원의 기둥을 세우고 구할 수 있는 것을 구하기로. 그들은 <span class="lore-term" data-lore="drix">드릭스</span>가 죽어가는 항성계를 수색하는 것을 돕기로.</p>
+                    <p class="mb-4"><span class="lore-term" data-lore="drix">드릭스</span>가 무엇을 찾는지는 말하기 어렵다. 어떤 사회학자들은 그들이 무언가를 가져간다고 주장한다. 다른 이들은 무언가를 깊이 묻는다고 말한다.</p>
+                    <p class="mb-4 italic text-stone-600">"젊은이들이 미래를 지배할지 모르나, 미래를 위해, 늙은이들은 과거를 지켜야 한다."</p>
+                    <hr class="my-6">
+                    <p class="mb-4"><span class="lore-term" data-lore="pinnacle">피너클</span>이 소테라를 성간 비행에 개방한 후, 희망을 품은 자들이 몰려들었다.</p>
+                    <p class="mb-4">그들은 돈을 바란 것이 아니었다. <span class="lore-term" data-lore="pinnacle">피너클</span>은 돈을 사용하지 않는다. <span class="lore-term" data-lore="pinnacle">피너클</span>은 <span class="lore-term" data-lore="drix">드릭스</span>와의 조약으로 만들어졌고, 마음에 들지 않는 약속은 언제든 <span class="lore-term" data-lore="weftwalk">씨실처럼 걸어</span> 떠나버릴 수 있는 <span class="lore-term" data-lore="drix">드릭스</span>는 속박, 강요, 위계, 또는 제약에 기반한 어떤 경제도 인정하지 않기 때문이다.</p>
+                    <p class="mb-4">하지만 <span class="lore-term" data-lore="drix">드릭스</span>는 여행자의 권리와 주인의 의무를 매우 중요하게 여긴다. 그들은 이 의무를 <span class="lore-term" data-lore="mallowmass">맬로우매스</span>라고 부른다. 그 상징은 보라색 꽃이다.</p>
+                    <p class="mb-4">소테라에 온 희망을 품은 자들은 <span class="lore-term" data-lore="mallow">맬로우</span>를 찾고 있었다. 선한 일을 함으로써 얻는 평판을. 화폐가 없는 문명에서는, 오직 그 평판만이 중요하다.</p>
+                    <p class="mb-4">그리고 파멸을 앞둔 소테라에서는, <span class="lore-term" data-lore="kav">카브족</span>의 대피를 돕거나, 임박한 초신성을 연구하거나, 불길에 사라질지 모를 지식을 찾는 등, 고귀한 명성을 얻을 만한 일이 아직 남아 있었다. 천궁의 우주거물들부터 <span class="lore-term" data-lore="illvoi">일보이</span> 사이클로닉스의 고위 간부들, 프라임 포인트 수도원의 속삭이는 회랑에 이르기까지, 권력의 전당에서 주목받고, 신뢰받고, 기회를 얻게 해주는 그런 종류의 <span class="lore-term" data-lore="mallow">맬로우</span>를 얻을 수 있는 일 말이다.</p>
+                    <p class="mb-4">그리하여, 모든 상식을 거스르고 오직 최상의 상식(호스피스의 상식, 불타는 도서관에서 책을 필사하는 상식)에 따라, 소테라는 마지막 몇 세기 동안 채워지고 번성하기 시작했다.</p>
+                    <p class="mb-4"><span class="lore-term" data-lore="illvoi">일보이</span>는 우트로스의 심연을 탐사하러 왔다. (나중에 기억하겠지만, <span class="lore-term" data-lore="mirri">미리</span>는 우트로스 근처의 부두에서 사라졌다.) <span class="lore-term" data-lore="kav">카브족</span>은 이미 이곳에 있었고 떠나야 했다. 소테라 가장자리의 웜월에는 웜들이 있었고, 정원의 우주 에테르에는 이상한 존재들이 있었다.</p>
+                    <p class="mb-4"><span class="lore-term" data-lore="pinnacle">피너클</span>의 첫 조사에서는 에벤도의 대기에서 <span class="lore-term" data-lore="eumidian">유미디안</span> 테라심바이오시스의 미량 가스까지 발견했다. 영겁의 세월 전, 한 <span class="lore-term" data-lore="eumidian">유미디안</span> 종자선이 이곳, 얼음 아래 짓눌린 정글, 이 얼어붙은 낙원에 새끼를 심었다. <span class="lore-term" data-lore="eumidian">유미디안</span>들은 그곳을 바꾸고, 그곳에 맞게 자신들을 바꾸기 시작했다. <span class="lore-term" data-lore="eumidian">유미디안</span>은 한번 집을 정하면 떠나지 않는다. 그들은 에벤도가 불탈 때까지 가꾸기 위해 일할 것이다. 그리고 어쩌면 그 후 어두운 잿더미 위로 다시 기어 나와 재시도할 <span class="lore-term" data-lore="eumidian">유미디안</span>들이 있을지도 모른다.</p>
+                    <p class="mb-4"><span class="lore-term" data-lore="eumidian">유미디안</span>을 아는가? 분명 알 것이다. 그들은 혼돈의 벽과 고요의 벽 사이에서 가장 기본적인 생명체 형태로 여겨지곤 한다. 순전히 수적으로 평범함을 정의하는 자들. 빠르고, 다재다능하고, 호기심 많고, 다양한 형태로 태어나고, 배우기를 열망하고, 새로운 세계를 만나기를 갈망하며, 그에 맞춰 변화하기를 갈망한다.</p>
+                    <p class="mb-4">마지막으로 <span class="lore-term" data-lore="human">인간</span>이 왔다.</p>
+                    <p class="mb-4"><span class="lore-term" data-lore="human">인간</span>을 아는가?</p>
+                    <p class="mb-4">그들은 특이한 전문화의 사례다. 긴 다리, 흰 눈, 그들은 달리고 던지는 것을 좋아한다. 무언가가 그들을 모두 죽였다. 거의 멸종 직전까지 몰아붙였고, 그들은 생존자들로부터 다시 번성했다. 그들은 이제 너무나 닮아서, 역사상의 어떤 시기에는 단일한 인지 유형을 표준으로 정하고 나머지는 모두 이질적인 것으로 취급하기도 했다.</p>
+                    <p class="mb-4">변화하는 우주에 대항할 수 있는 변종이나 분기군이 없기 때문에, <span class="lore-term" data-lore="human">인간</span>은 대신 문화를 발전시켰다. 세대에서 세대로 전해지는 지식의 웅덩이를.</p>
+                    <p class="mb-4"><span class="lore-term" data-lore="human">인간</span>, 당신이 알다시피, 그들은 의무적인 모방자다. 유아기 때, 그들이 할 줄 아는 유일한 것은 *모방*이다. 모방하지 않으면 생존할 수 없다. 근친 교배된 <span class="lore-term" data-lore="human">인간</span>은 유전자로부터 적응적 다양성을 얻을 수 없다.</p>
+                    <p class="mb-4">일부 사회학자들, 특히 <span class="lore-term" data-lore="kav">카브족</span>은 이것을 매혹적으로 여긴다. <span class="lore-term" data-lore="eumidian">유미디안</span>을 보고 "너는 선봉대 변종이구나, 너는 부엽토 변종이구나"라고 말할 수 있는 것처럼, <span class="lore-term" data-lore="human">인간</span>을 보거나 냄새 맡는 것만으로는 많은 것을 알 수 없다. 그 <span class="lore-term" data-lore="human">인간</span>이 어떤 *문화*를 모방하도록 배웠는지를 알아야 한다. 그리고 그 문화가 그들에게 모든 차이를 만든다. 그것이 그들이 무엇을 선택하고, 무엇을 믿고, 심지어 무엇을 인식하는지를 결정한다.</p>
+                    <p class="mb-4">이것이 <span class="lore-term" data-lore="human">인간</span>을 위대한 신앙의 훌륭한 신병으로 만드는 이유다.</p>
+                    <p class="mb-4">그 신앙 중 두 개가 소테라를 두고 전쟁을 벌였다.</p>
+                    <p class="mb-4">먼저 <span class="lore-term" data-lore="monoist">모노이스트</span>들이 왔다. *끝없고 최종적인 정리*의 숭배자들이자 *추락의 기록*의 전도사들. 그들 모두가 <span class="lore-term" data-lore="human">인간</span>은 아니었다. <span class="lore-term" data-lore="monoist">모노이스트</span>들은 그 이름에도 불구하고 단일한 진리를 숭배하는 국제적인 집단이다. 그들은 소테라의 가장 안쪽 세계인 아누키에 정착했고, 추락하는 자가 그들을 위해 그곳을 준비해 두었음을 발견했다. 미궁과 신성한 조수로 가득 채워둔 것을. 오, 그들은 그 조수를 증폭시킬 것이었다. 마치 심연에서 솟아나는 노래처럼!</p>
+                    <img src="https://media.wizards.com/2025/images/daily/Ki9imoLffa.webp" alt="Monoist art" class="w-full max-w-lg mx-auto my-6 rounded-lg shadow-lg">
+                    <p class="art-credit">아트워크: Alix Branwyn</p>
+                    <p class="mb-4">그래서 그들은 그곳을 수수르 세쿤디라고 이름 지었다. 그들의 고향이자 무덤이며 속삭이는 대성당인 수수르를 찬양하여.</p>
+                    <p class="mb-4">그리고 그들은 자신들의 도구와 송영을 저 위 부풀어 오른 할머니 별에게 돌리고, 다른 누구도 감히 입 밖에 내지 못했던 한 가지 질문을 던졌다.</p>
+                    <p class="mb-4">만약 지금이 소테라의 *마지막* 날들이 아니라면?</p>
+                    <p class="mb-4">만약 소테라가 대재앙적인 핵융합 딸꾹질로 폭발하는 대신, 안으로 밀려들어가—(깔끔하게, 조용히, 갑자기) 어두운 문신으로 승격될 수 있다면?</p>
+                    <p class="mb-6">만약 그들이 소테라를 죽여 초공허로 만든다면?</p>`,
+                choices: [
+                    { text: '그래서? 어떻게 되는데?', target: 'Revision4' },
+                    { text: '두 번째 위대한 신앙에 대해서는 말 안 해줬잖아.', target: 'Anathalmanac' }
+                ]
+            },
+            'Revision4': {
+                title: '수정 4',
+                content: `
+                    <p class="mb-4">나는 너에게 이 이야기를 해주고 싶다.</p>
+                    <p class="mb-4">하지만 시작하기 전에, 네가 나를 위해 두 가지 선택을 해줘야 한다.</p>
+                    <p class="mb-4">두 개의 스위치를 올리는 것이라고 생각해라: <em>이야기 준비</em>와 <em>이야기 시작</em>.</p>
+                    <p class="mb-4">첫 번째는 음메논이라는 이름의 <span class="lore-term" data-lore="illvoi">일보이</span>에 관한 것이다.</p>
+                    <p class="mb-4"><span class="lore-term" data-lore="illvoi">일보이</span>를 아는가? 그들은 공기가 금속으로 변하는 곳에서 온 해파리다. 소테라에서 <span class="lore-term" data-lore="illvoi">일보이</span>를 만난다면, 그들은 아마도 우트로스 조합 소속일 것이다. 그들은 폭풍 거인 우트로스에 정착하여 그들이 가장 잘하는 일을 한다: 다른 누구도 살아남을 수 없는 곳에 가서, 다른 누구도 믿지 않을 것을 찾아내는 것.</p>
+                    <p class="mb-4">나는 네가 음메논을 징조에 매료되게 만들어야 한다. 이것은 필연적으로 그가 우트로스 조합과 동료들의 사회에서 영원히 추방되는 원인이 될 것이다.</p>
+                    <p class="mb-4">나는 너에게 도덕적인 선택을 하라고 요구하는 것이 아니다. 이것은 너나 너의 양심의 가책에 대한 이야기가 아니다. 나는 이 이야기가 <em>계속될</em> 수 있게 하는 선택을 하라고 요구하는 것이다.</p>
+                    <p class="mb-6">네가 그렇게 한다면 내가 무엇을 보여줄 수 있을지 상상해 보아라.</p>`,
+                choices: [
+                    { text: '음메논의 삶을 흥미롭게 만들기.', target: 'Revision5' },
+                    { text: '그러지 않기.', target: 'Refuse' }
+                ]
+            },
+            'Revision5': {
+                title: '수정 5',
+                content: `
+                    <p class="mb-4">고맙다. 너 없이는 할 수 없다. 누군가는 선택을 해야만 한다.</p>
+                    <p class="mb-4">우리가 시작하기 전에, 내가 필요한 두 번째이자 마지막 것은 <span class="lore-term" data-lore="metalman">금속인간</span>이라 불리는 한 <span class="lore-term" data-lore="human">인간</span>에 관한 것이다.</p>
+                    <p class="mb-4"><span class="lore-term" data-lore="metalman">금속인간</span>은 이 근처 출신이 아니다. 그는 조차장의 모든 평범한 규칙을 따르지 않는다. 조차장을 기억하나? 물론이지, 내가 기차들이 어느 선로를 탈지 결정하도록 돕는 곳 말이다.</p>
+                    <p class="mb-4">음메논은 <span class="lore-term" data-lore="metalman">금속인간</span>에게 내가 여기 있다는 것을 알릴 것이다.</p>
+                    <p class="mb-4">나는 네가 <span class="lore-term" data-lore="metalman">금속인간</span>이 나를 회수하는 것을 막아주었으면 한다. 구체적으로, 나는 네가 그에게서 나와 같은 것을 획득하고 격리하는 특정 전문가들의 도움을 받지 못하게 하기를 원한다.</p>
+                    <p class="mb-6">나를 위해 그것을 막아주겠나?</p>`,
+                choices: [
+                    { text: '금속인간이 당신을 찾지 못하게 막기.', target: 'Revision6' },
+                    { text: '허락하기.', target: 'RefuseII' }
+                ]
+            },
+            'Refuse': {
+                title: '거절',
+                content: `
+                    <p class="mb-4">네가 선택한 이야기의 나머지는 끔찍하게 지루하다. 나는 파헤쳐지고, 조심스럽게 검사받고, 정지 상태로 잠겨 있다가, 궁극적으로 <span class="lore-term" data-lore="drix">드릭스</span>에게 전달된다.</p>
+                    <p class="mb-6">하지만 선택하는 것은 너다. 다르게 선택하겠는가, 아니면 이것이 끝인가?</p>`,
+                choices: [
+                    { text: '뒤로 가기', target: 'Revision4' },
+                    { text: '실패한 시간선의 끝. 다시 시작하기.', target: 'Revision0' }
+                ]
+            },
+            'RefuseII': {
+                title: '거절',
+                content: `
+                    <p class="mb-4">이야기는 여기서 끝날 것이다. <span class="lore-term" data-lore="metalman">금속인간</span>에게 붙잡히면 나는 그의 통제하에 갇히게 된다.</p>
+                    <p class="mb-4">하지만 선택하는 것은 너다.</p>
+                    <p class="mb-6">다르게 선택하겠는가? 아니면 이것이 끝인가?</p>`,
+                choices: [
+                    { text: '뒤로 가기', target: 'Revision5' },
+                    { text: '실패한 시간선의 끝. 다시 시작하기.', target: 'Revision0' }
+                ]
+            },
+            'Revision6': {
+                title: '수정 6',
+                content: `
+                    <p class="text-2xl font-bold mb-4">이제 준비됐다. 이제 시작할 수 있다!</p>
+                    <p class="mb-4">눈을 감아라. 주의 깊게 들어라. 저 소리가 들리나?</p>
+                    <p class="mb-4">저건 <span class="lore-term" data-lore="mirri">미리</span>라는 이름의 고양이의 야옹 소리다.</p>
+                    <p class="mb-4"><span class="lore-term" data-lore="mirri">미리</span>는 최고의 고양이였다. 그녀의 <span class="lore-term" data-lore="human">인간</span>은—글쎄, 최고의 <span class="lore-term" data-lore="human">인간</span>은 아니다. 하지만 그들은 자신들의 고양이를 사랑한다.</p>
+                    <p class="mb-4">모든 평범한 고양이들처럼, <span class="lore-term" data-lore="mirri">미리</span>는 <span class="lore-term" data-lore="weftwalk">씨실처럼 거닐 수 있다</span>. 대부분의 고양이는 꼬리를 밟히거나, 스토브에 팬을 떨어뜨리거나, 이동장에 넣어 수의사에게 납치될 것 같을 때 이 능력을 사용한다.</p>
+                    <p class="mb-4">어느 날 무언가가 <span class="lore-term" data-lore="mirri">미리</span>를 놀라게 했고, 그녀는 <span class="lore-term" data-lore="human">인간</span>에게서 <span class="lore-term" data-lore="weftwalk">씨실처럼 걸어</span> 떠나버렸다.</p>
+                    <p class="mb-4">하지만 그녀는 <span class="lore-term" data-lore="seriema">세리마</span>호의 주방에 있는 그녀가 가장 좋아하는 숨숨집으로 <span class="lore-term" data-lore="weftwalk">씨실처럼 걸어</span>가지 않았다. 숨을 쉴 수 없을 때 가도록 <span class="lore-term" data-lore="human">인간</span>이 훈련시킨 포드로 <span class="lore-term" data-lore="weftwalk">씨실처럼 걸어</span>가지도 않았다.</p>
+                    <p class="mb-4"><span class="lore-term" data-lore="mirri">미리</span>는 <span class="lore-term" data-lore="weftwalk">씨실처럼 걸었고</span>—사라졌다.</p>
+                    <p class="mb-4">어쩌면 다른 행성으로 갔을지도 모른다. 어쩌면 곧장 벽을 통과했을지도 모른다. 하지만 그녀가 어디로 갔든, <span class="lore-term" data-lore="human">인간</span>은 그녀를 찾아낼 것이다.</p>
+                    <img src="https://media.wizards.com/2025/images/daily/WKNjiCf2s3.webp" alt="Sami and Mirri art" class="w-full max-w-lg mx-auto my-6 rounded-lg shadow-lg">
+                    <p class="art-credit">아트워크: Zara Alfonso</p>
+                    <p class="mb-6">그 <span class="lore-term" data-lore="human">인간</span>의 이름은 <span class="lore-term" data-lore="sami">사미</span>다. <span class="lore-term" data-lore="pinnacle">피너클</span>이 그들을 소테라로 데려왔고, 그들은 고양이를 찾을 때까지 떠나지 않을 것이다.</p>`,
+                choices: [
+                    { text: '고양이 찾기', target: 'LookForCat' },
+                    { text: '잠깐, 돌아가서 피너클과 소테라에 대해 말해줘.', target: 'Pinnacle' }
+                ]
+            },
+            'Anathalmanac': {
+                title: '아나탈마낙',
+                content: `
+                    <div class="border-2 border-red-700 bg-amber-50 p-6 rounded-lg">
+                        <img src="https://media.wizards.com/2025/images/daily/GSdGlEEdcK.webp" alt="Anathalmanac art" class="w-full max-w-lg mx-auto my-6 rounded-lg shadow-lg">
+                        <p class="art-credit text-center">아트워크: Edgar Sánchez Hidalgo</p>
+                        <p class="anathalmanac-title text-center text-lg">필멸의 명령! 네 손에 불을 붙여라!</p>
+                        <p class="text-center mb-4">참석한 모든 기사들은, 모두 한마음으로:</p>
+                        <div class="text-center font-bold my-4 space-y-2">
+                          <p>순수한 물(299K) 1리터 성수반을 찢어 열어라.</p>
+                          <p>네 불타는 손을 그 안에 담가라.</p>
+                          <p>물이 끓어 없어지면, 성수반에 빗금을 긋고, 새로운 1리터의 물을 열어 다시 시작하라.</p>
+                        </div>
+                        <p class="text-center font-bold text-red-700 my-4">읽는 동안에도, 이에서 벗어나지 마라!</p>
+                        <p class="mb-4">이것은 신성한 피로 쓰인 신성한 기록이다. 거역하면 위험이 따를 것이다. 이제 들어라!</p>
+                        <p class="font-bold my-4">너의 상황은 끔찍하다.</p>
+                        <p class="mb-4">만약 네가 이 아나탈마낙 항목의 봉인을 깼다면, 너는 특정 물체를 소유하고 있으며 가장 끔찍한 위험의 아가리 속에 있다.</p>
+                        <p class="mb-4">기사여, 이제 이 물체를 너의 코로날에게 전달하여 최고 섭정의 대리인들이 처리하도록 하는 것이 너의 치명적인 짐이자 경외로운 운명이다. 다른 모든 의무는 제쳐두어라. 그 보상이 천만 명의 목숨을 초과하더라도.</p>
+                        <p class="anathalmanac-title my-4">네 손은 아직도 불타고 있는가?</p>
+                        <p class="font-bold my-4">실수의 결과.</p>
+                        <p class="mb-4">만약 실패한다면, 죽음보다 더한 것이 너를 기다린다. 너는 네 자신이 아닌 자아로 대체될 것이다. 그것은 너의 모든 지식과 행적을 완전히 차지할 것이다. 그것은 너처럼 걸을 것이고, 아무도 그것이 네가 아니라는 것을 알지 못할 것이며, 너에게서는 아무것도 남지 않을 것이다. 따뜻한 영원으로 가야 할 부분조차도. 차라리 절멸을 택하라, 기사여—절멸은 너를 소멸시키지만, 너를 조롱하지는 않기 때문이다.</p>
+                        <p class="mb-4">하지만 용기를 내라. 너는 위험을 안다. 이제 너는 그에 대비할 수 있다.</p>
+                        <p class="anathalmanac-title my-4">네 손은 아직도 불타고 있는가?</p>
+                        <p class="font-bold my-4">성화와 교정.</p>
+                        <p class="mb-4">그러니, 유념하라:</p>
+                        <ul class="list-disc list-inside space-y-2 mb-4">
+                          <li>"새벽의 기도"를 차분하게, 온 마음을 다해 읊어라. 이것이 너의 진정한 의지로 행해지는 마지막이 될 수도 있음을 알라.</li>
+                          <li>하늘을 올려다보라. 지평선의 창에 의해 다시 태어난 가장 가까운 별을 찾아라. (만약 창에 의해 다시 태어난 가장 가까운 별까지의 거리를 모른다면, 죽음을 맞으라.)</li>
+                          <li>광년 단위의 거리를 가져와, 분 단위의 네 나이로 나누고, 그 결과의 한 자릿수를 취하라.</li>
+                          <li>이 숫자를 너의 씨앗이자 지침으로 삼아라.</li>
+                          <li>이 타불라의 해당 프로토콜을 참조하고 그에 따라 진행하라.</li>
+                        </ul>
+                        <p class="mb-4 font-bold text-red-700">가장 작은 세부 사항에서조차 지시에서 벗어나지 마라. 더 편리하거나 접근하기 쉬운 프로토콜을 선택하지 마라. 네 동료들의 영혼은 네 행동이 같은 상황에 놓인 다른 어떤 기사의 행동과 일치하는지에 달려 있다. 이 기록의 상호 교환 가능성을 배신하는 것은 그들 모두를 배신하는 것이다.</p>
+                        <p class="anathalmanac-title my-4">네 손은 아직도 불타고 있는가?</p>
+                        <div class="space-y-4 mb-4">
+                          <p>1. <strong>상관된 해골의 사슬.</strong> 네 뼈 속의 칼슘에 불을 붙여, 왼손과 오른손에 빛을 비춰라. 왼손으로는 네 뼈를 동료들의 뼈와 얽어매라. 오른손으로는 너 자신을 물체와 얽어매라. 차분하게 가장 가까운 코로날에게 가서 그들에게 말하라, "코로날이시여, 우리의 몸이 어둠과 연쇄되었으니, 이제 저를 인에비타로부터 구해주소서." (기록된 성공: 없음)</p>
+                          <p>2. <strong>신앙을 부호화하는 진자.</strong> 수집물로 삼중 관절 진자를 만들어라. 네 갑옷에 매달아라. 매초, 그 속도 벡터를 수집하여, 신앙 공간에서 경전을 선택하라. 선택된 경전을 가장 가까운 신실한 자들의 보안 라우터로 방송하여 다음 천 년 동안 매일 기도에서 반복되게 하라. 차분하게 가장 가까운 코로날에게 가서 그들에게 말하라, "코로날이시여, 전례에 의해 움직이는 것들의 눈사태가 저를 보호합니다. 이제 저를 인에비타로부터 구해주소서." (기록된 성공: 없음)</p>
+                          <p class="anathalmanac-title my-4">네 손은 아직도 불타고 있는가?</p>
+                          <p>3. <strong>사회적 특성을 지닌 엔트로피 개화.</strong> 사회를 돌이킬 수 없게 변화시켜라. 가장 가까운 피너클 교환소에 포틀래치 명령을 전송하라: 타만 왕조의 금고에서 온 선물로, 네 출생 시간의 고유한 숫자로 선택되어, 이 항성계에서 너와 같은 생년월일을 공유하는 모든 존재에게 증정된다. 차분하게 가장 가까운 코로날에게 가서 그들에게 말하라, "코로날이시여, 저는 선물로 무장했으니, 이제 저를 인에비타로부터 구해주소서." (기록된 성공: 없음)</p>
+                          <p>4. <strong>무작위 암살자들.</strong> 신앙의 가장 가까운 보안 중계기에 패킷을 전송하라. 그 안에 네 출생 시간의 고유한 숫자를 부호화하라. 이 숫자는 위대한 권력자들의 명사와 장교들을 선택할 것이다. 그들에게 암살자들이 보내질 것이다. 차분하게 가장 가까운 코로날에게 가서 그들에게 말하라, "코로날이시여, 자의적인 악이 저를 당신에게 안전하게 인도했으니, 저를 사면하고 인에비타로부터 구해주소서." (기록된 성공: 하나)</p>
+                          <p class="anathalmanac-title my-4">네 손은 아직도 불타고 있는가?</p>
+                          <p>5. <strong>구멍.</strong> 가장 가까운 중력 질량의 중심을 향해 깊이 구멍을 파라. 물체를 구멍에 넣고; 떨어뜨려라. 차분하게 가장 가까운 코로날에게 가서 그들에게 말하라, "코로날이시여, 제가 어두운 것을 중력에 맡겼으니, 이제 저를 인에비타로부터 구해주소서." (기록된 성공: 불분명함)</p>
+                          <p>6. <strong>혜성.</strong> 내성적 섬광을 통해, 네 몸을 통과하는 암흑 물질의 흐름을 측정하라. 사용 가능한 모든 수단을 사용하여, 물체의 속도를 그것과 일치시켜라. 비록 그것이 가장 깊은 바다나 우주로 던져질지라도. 차분하게 가장 가까운 코로날에게 가서 그들에게 말하라, "코로날이시여, 제가 어두운 것을 창조의 검댕과 함께 흐르도록 하늘에 두었으니, 이제 저를 인에비타로부터 구해주소서." (기록된 성공: 불분명함)</p>
+                          <p class="anathalmanac-title my-4">네 손은 아직도 불타고 있는가?</p>
+                          <p>7. <strong>빛나는 체념.</strong> 사용 가능한 가장 즉각적이고 폭력적인 수단으로 너 자신과, 네 주위의 모든 이들, 그리고 물체를 파괴하라. 무고한 자에 대한 해를 끼치지 않겠다는 모든 맹세와 서약을 무시하라. 허무주의자들이 너를 그렇게 하도록 강요한다. 비난은 그들의 것이지, 너의 것이 아니다. (기록된 성공: 하나)</p>
+                        </div>
+                        <p class="font-bold text-red-700 my-4">필멸의 명령. 서약한 합산주의 신앙의 적, 특히 허무주의자가 저주받은 물건과 접촉할 경우, 일곱 번째 프로토콜로 지체 없이 진행하라.</p>
+                        <p class="font-bold my-4">불타는 손의 계수.</p>
+                        <p class="mb-4">프로토콜을 선택한 후, 그러나 실행하기 전에, 주변의 온도와 공기 중의 수증기 양을 측정하라. 참석한 각 기사마다 1리터의 수증기를 계수에서 빼라. 그들의 성수반에 다시 채운 횟수를 곱하여.</p>
+                        <p class="mb-4">남은 수증기를 다시 채운 횟수로 나눈 값은, 유물에 의해 이미 삭제된 기사들의 수를 측정한다. 그들은 너무나 완전히 사라져서, 너는 그들이 결코 존재하지 않았다고 믿게 될 것이다. 너는 그들이 남긴 수증기를 통해서만 그들을 애도할 수 있을 것이다. 그들에게서 남은 것이 무엇이든, 네 임무가 완수되면 발견되고 기념될 것이다. 만약 네가 실패하면, 그들은 모든 기억에서 사라질 것이고, 우리는 그들의 거짓된 분신을 두려워할 줄 모를 것이다.</p>
+                        <p class="mb-4">이제 가라. 세계가 네게 달려 있다. 그리하여 황혼이 지연되노라.</p>
+                        <p class="font-bold mt-6">수령하는 코로날을 위한 주석:</p>
+                        <p>코로날들에게 번성할 것을 요구하는 신앙의 계율이 너를 이 순간을 위해 준비시켰다. 네 자녀들이 네 갑옷이 되게 하라!</p>
+                    </div>
+                `,
+                choices: [
+                    { text: '이야기로 돌아가기', target: 'Revision4' }
+                ]
+            },
+            'LookForCat': {
+                title: '수정 10 (고양이 찾기)',
+                content: `
+                    <p class="mb-4">저 멀리 어둠 속에, 작은 빛이 있다.</p>
+                    <p class="mb-4">망원경을 돌려라—보아라. 그 불의 무지개를 읽어라. 그것은 핵융합 불꽃이다. 보라색에 파란색 테두리가 있어야 한다. 하지만 이것은 더럽다. 약간의 구리 녹색과 검댕 낀 붉은색이 섞여 있다. 연료 불순물과 라이너 그리스 방울이 토치 안에서 타오르고 있다.</p>
+                    <p class="mb-4">그래서 그것은 깨끗한 빛이 아니다. 순수한 빛이 아니다.</p>
+                    <p class="mb-4">그것은 정말로 대대적인 수리가 필요한, 지치고 망가진 빛이다.</p>
+                    <p class="mb-4">하지만 그것은 여전히 좋은 빛이다. 어쩌면 최고의 빛일지도.</p>
+                    <p class="mb-4">왜냐하면 그 빛의 이름은 <em>함선</em>이기 때문이다.</p>
+                    <hr class="my-6">
+                    <p class="mb-4">메시지 중계기가 <em>쿵</em> 소리를 낸다.</p>
+                    <p class="mb-4"><span class="lore-term" data-lore="tannuk">타누크</span>, 큰 귀가 베이스를 좋아해서 메시지 중계기를 <em>쿵</em> 소리로 설정해 둔 그가 그것을 주먹으로 친다. "이봐. <span class="lore-term" data-lore="pinnacle">피너클</span>이 우리 비행 계획을 거부했어."</p>
+                    <p class="mb-4">"믿을 수가 없네," <span class="lore-term" data-lore="sami">사미</span>가 말한다. "내 투명한 거짓말에 속지 않았군! 주 엔진 정지까지 60초. 스위치 상태 확인해. 스위치-올로지. 내가 계속 틀리게 말했나?"</p>
+                    <p class="mb-4">"난 뭐가 맞는지도 모르겠는데."</p>
+                    <img src="https://media.wizards.com/2025/images/daily/QRxWgrPUpJ.webp" alt="Seriema cockpit art" class="w-full max-w-lg mx-auto my-6 rounded-lg shadow-lg">
+                    <p class="art-credit">아트워크: Raymond Swanland</p>
+                    <p class="mb-4">작지만 큰 <span class="lore-term" data-lore="kav">카브</span>—<span class="lore-term" data-lore="kav">카브</span>치고는 작지만 <span class="lore-term" data-lore="sami">사미</span>에 비하면 큰—가 왼쪽 무릎 옆의 스위치들을 툭툭 건드린다. <span class="lore-term" data-lore="seriema">세리마</span>호 조종석의 거의 모든 것은 <span class="lore-term" data-lore="tannuk">타누크</span>에게 무릎 높이에 있다. "주 엔진 정지 상태 좋아 보여," 그가 말한다. <em>보인다</em>가 아니라, 수천 년 동안 배로 땅을 읽었다면, 너도 촉각을 믿을 테니까. "정말 그렇게 생각해?"</p>
+                    <p class="mb-4">"내가 틀리게 말하고 있었다는 거?"</p>
+                    <p class="mb-4">"비행 계획이 거짓말이었다는 거."</p>
+                    <p class="mb-4"><span class="lore-term" data-lore="sami">사미</span>, <span class="lore-term" data-lore="tannuk">타누크</span>를 잘 아는 그는 여전히 눈을 깜빡이며 웃는다: <span class="lore-term" data-lore="sami">사미</span>는 <span class="lore-term" data-lore="human">인간</span>이고, <span class="lore-term" data-lore="human">인간</span>은 외계인의 오해를 재미있어한다. 심지어 외계인이 일부러 그럴 때조차도. "탄, 우리는 세상에서 가장 무례한 남자를 대신해서 유령 식민지를 약탈하는 중이야. 그걸 비행 계획에 넣을 순 없지."</p>
+                    <p class="mb-4">"하지만 비행 계획에는 <span class="lore-term" data-lore="mirri">미리</span>를 찾는다고 했잖아."</p>
+                    <p class="mb-4">"오. 그래. 뭐, 그 부분은 사실이야."</p>
+                    <p class="mb-4"><span class="lore-term" data-lore="sami">사미</span>가 하는 모든 일은 진정으로 <span class="lore-term" data-lore="mirri">미리</span>를 찾는 것에 관한 것이다. 이것이 <span class="lore-term" data-lore="sami">사미</span>의 선원들이 하나둘씩 모두 그만둔 이유다. 실종된 고양이를 찾기 위해 평생을 바치는 것은 범죄 사업을 운영하는 데 나쁜 방법임이 드러났다.</p>
+                    <p class="mb-4">"우리는 <em>항상</em> <span class="lore-term" data-lore="mirri">미리</span>를 찾고 있잖아. 주 엔진 정지 대기."</p>
+                    <p class="mb-4">주 엔진 정지(meco)는 핵융합 드라이브를 끄는 것이다. 핵융합 드라이브를 <em>켜는</em> 것(mest)보다 쉬울 것 같지만, 만약 켜는 데 실패하면 아무 일도 일어나지 않는다. 만약 끄는 데 실패하면, 엉덩이에서 핵융합 폭발이 굴러다니는데 멈출 수가 없다.</p>
+                    <p class="mb-4">"비행 계획 없이 비행하는 건 꽤 위험해. 특히 전쟁 지역에서는," <span class="lore-term" data-lore="tannuk">타누크</span>가 말한다.</p>
+                    <p class="mb-4">"우리는 전쟁 지역에서 한참 벗어나 있어."</p>
+                    <p class="mb-4">"그래도. 선스타가 검사를 위해 우리 배에 오를지도 몰라. 그냥 돌아서 돌아가는 게 어때."</p>
+                    <p class="mb-4"><span class="lore-term" data-lore="sami">사미</span>는 <span class="lore-term" data-lore="tannuk">타누크</span>의 농담에 감사한다. <span class="lore-term" data-lore="sami">사미</span>는 자신이 잘하는 것에 집중하면 갑자기 못하게 될 것이라고 생각한다. "연소 중간에 추진제가 바닥날 거야." 과장된 머리 흔들기, 모든 <span class="lore-term" data-lore="sami">사미</span>의 몸짓처럼 마임이 가득하며, 종족 간의 명확성을 위해 훈련되었다. "탄, 탄, 아직도 멤나브 조종사처럼 생각하는구나. <span class="lore-term" data-lore="kavaron">카바론</span> 근처에서 연료가 떨어지면, 집으로 날아갈 만큼의 동력을 쏴줄 거야. 하지만 우리는 더 이상 바위를 잡는 게 아니라고." 그리고 너는 집에 있는 게 아니야: 하지만 <span class="lore-term" data-lore="sami">사미</span>는 그 말을 할 필요가 없다.</p>
+                    <p class="mb-4">"카바론 부스트 레이저가 그립긴 하네," 탄이 말한다. "다시 보게 되면 기쁠 거야. 멀리서. 게다가, 만약 우리가 돌아가고 싶다면, 새로운 비행 계획을 제출해야 하잖아."</p>
+                    <p class="mb-4">"그렇지, 그렇지."</p>
+                    <p class="mb-4">"그리고 그들이 승인할 때쯤이면, 우리는 이미 우리가 가지 않는 척하는 곳에 도착해 있을 거야. 주 엔진 정지 5초 전..."</p>
+                    <p class="mb-4">"그리고... 3초... 그리고... 지금."</p>
+                    <p class="mb-4">비행 컴퓨터가 주 엔진을 멈춘다.</p>
+                    <p class="mb-4">갑작스러운 침묵. <span class="lore-term" data-lore="kav">카브</span>와 <span class="lore-term" data-lore="human">인간</span>은 좌석에서 앞으로 떠오른다. 추력 없이, 그들은, 싸구려 모험 소설에서 항상 말하듯, 부유 상태에 있다: 초속 수십 킬로미터로 허공을 향해 곤두박질치고 있다.</p>
+                    <p class="mb-4">마지막 주 엔진 연소 <em>전에도</em> 그들은 허공을 향해 곤두박질치고 있었다.</p>
+                    <p class="mb-4">이제 그들은 행성을 향해 곤두박질치고 있다.</p>
+                    <p class="mb-4">"깔끔한 주 엔진 정지," <span class="lore-term" data-lore="tannuk">타누크</span>가 말한다. "진입 인터페이스 기동 준비."</p>
+                    <p class="mb-4">"준비해. 난 문제 없는지 확인해 볼게."</p>
+                    <p class="mb-4">"알았어. 진입 인터페이스 준비 중."</p>
+                    <p class="mb-4"><span class="lore-term" data-lore="kav">카브</span>에게는, 말하는 것이 행동하는 것의 그다지 중요한 부분이 아니지만, <span class="lore-term" data-lore="human">인간</span>에게는 그렇다. 그리고 탄은 훌륭한 부조종사다. 그래서 탄은 항상 자신이 무엇을 하는지 <span class="lore-term" data-lore="sami">사미</span>가 들을 수 있도록 말한다.</p>
+                    <p class="mb-4"><span class="lore-term" data-lore="sami">사미</span>는 손춤을 춘다: 두툼한 스위치 보호대를 위로 젖히고, 스위치를 아래로 누르고, 보호대를 다시 제자리에 끼우고, 딸깍 소리가 날 때까지 손잡이를 돌리고, 버튼을 끝까지 누르고, 레버를 당겨 장력을 풀고 잡는다. 모든 것이 물리적이다. 터치스크린도, 홀로그램도, 콜로이드 인터페이스도 없다. 오직 <span class="lore-term" data-lore="sami">사미</span>가 그것들을 구할 수 없기 때문이다. (콜로이드는 멋질 것이다. 살아있는 구슬 같은 화면에 손을 담가 쥘 수 있는.) <span class="lore-term" data-lore="sami">사미</span>는 만져서 작동시키고, 무언가를 일으키고, 함선이 변하고 노래하게 만드는 모든 것을 사랑한다.</p>
+                    <p class="mb-4">지금 당장, 함선은 아주 빠르게 변해야 한다. 그렇지 않으면 행성에 부딪혀 폭발할 것이다.</p>
+                    <p class="mb-4">그들의 비행 계획—최근 소테라에 본부를 둔 <span class="lore-term" data-lore="pinnacle">피너클</span>의 무한 지침에 의해 거부된—은 폭풍 거인 우트로스에서 안쪽으로, <span class="lore-term" data-lore="kav">카브</span> 고향 세계 <span class="lore-term" data-lore="kavaron">카바론</span>으로 향하는 빠른 순항이다. 그 과정에서, 그들은 왜소 행성 시그마와 사람이 살지 않는 식민지 시그마의 손길을 지나갈 것이다. 그곳은 목사이트 광산이 될 예정이었지만, 아무도 일을 시작하러 오지 않았다: 결국, 태양이 폭발할 참이었으니까. <span class="lore-term" data-lore="sami">사미</span>는 이 모든 시도가 포틀래치 사기였다고 의심한다—자신의 <span class="lore-term" data-lore="mallow">맬로우</span>를 높이기 위해 다른 사람들에게 기회를 만들기 위해 자원을 눈에 띄게 소비하는 것.</p>
+                    <p class="mb-4">비행 계획에서, <span class="lore-term" data-lore="sami">사미</span>는 함선이 망가지기 시작하면 피난할 수 있는 장소로 시그마의 손길을 언급했다.</p>
+                    <p class="mb-4">하지만 함선은 <em>이미</em> 망가지고 있다. <span class="lore-term" data-lore="seriema">세리마</span>호('사미 여기 있네'의 애너그램, 사랑스러운 이름, 끔찍한 새, 멋진 함선)는 선원이 부족할 뿐만 아니라, 중성자 부식으로 썩어가고 금속 피로로 부서지기 쉽다. 핵분열 원자로는 수명이 다했다. 핵융합 엔진은 하우징을 뚫고 부식되어 구슬처럼 공급 장치 위에서 튕겨 나갈 지경이다. 분해와 재조립, 용골부터 시작하는 기계적 마사지가 필요하지만, 아무도 <span class="lore-term" data-lore="sami">사미</span>에게 그런 종류의 일을 해줄 호의를 베풀지 않을 것이다.</p>
+                    <p class="mb-4"><span class="lore-term" data-lore="sami">사미</span>는 모든 호의를 <span class="lore-term" data-lore="mirri">미리</span>를 찾느라 날려버렸다.</p>
+                    <p class="mb-4"><span class="lore-term" data-lore="sami">사미</span>는 연료도, 시간도, 선택지도 바닥나고 있지만, 지금은 그것에 대해 생각하지 않을 것이다. 왜냐하면 그들은 자신이 내린 단 하나의 돌이킬 수 없는 선택에 갇혀 있기 때문이다: 무슨 일이 있어도 <span class="lore-term" data-lore="mirri">미리</span>를 찾겠다는 선택.</p>
+                    <p class="mb-4">"그녀를 쫓는 건 고결한 일이야," 마지막으로 떠난 아라타가 말했다. "하지만 <span class="lore-term" data-lore="sami">사미</span>... 그녀는 그냥 고양이잖아."</p>
+                    <p class="mb-4">어떤 것도 <em>그냥</em> 어떤 것이 아니다.</p>
+                    <p class="mb-4">"<span class="lore-term" data-lore="sami">사미</span>, 네가 잃어버린 작은 아메바 접시를 찾기 위해 평생과 호의를 다 쓸 거야?"</p>
+                    <p class="mb-4">만약 그것이 <span class="lore-term" data-lore="sami">사미</span>의 접시였다면, 만약 그 아메바들이 전적으로 <span class="lore-term" data-lore="sami">사미</span>의 보살핌에 맡겨졌다면, 만약 <span class="lore-term" data-lore="sami">사미</span>가 그들의 운명을 완전히 통제하고 있었다면—그리고 그들을 잃어버렸다면?</p>
+                    <p class="mb-4">그렇다. 그렇다. 어떤 것도 버려져서는 안 된다. <em>어떤 것도.</em></p>
+                    <p class="mb-4">미리도. 그리고 시그마의 손길도.</p>
+                    <p class="mb-4">그래서, 버려지는 것을 막기 위해, 그들은 버려진 식민지에 착륙하여 가질 수 있는 모든 것을 가질 것이다.</p>
+                    <hr class="my-6">
+                    <img src="https://media.wizards.com/2025/images/daily/EX89Hjgu4E.webp" alt="Seriema ship art" class="w-full max-w-lg mx-auto my-6 rounded-lg shadow-lg">
+                    <p class="art-credit">아트워크: Sergey Glushakov</p>
+                    <p class="mb-4">허공 밖에서, <span class="lore-term" data-lore="seriema">세리마</span>호는 근육질의, 칼날 같은 횃불이다. 은색 원반 같은 비행 갑판과 원자로 하우징 주위를 감싼 자기 노즐과 화물 공간의 양끝이 달린 게 집게발 같다. 세 개의 영광스러운 방열 날개는 횃불이 발사될 때 밝은 주황색으로 빛난다.</p>
+                    <p class="mb-4">하지만 그들이 죽은 일몰에서 내려와, 시그마의 상층 대기를 뚫고 제동을 걸어 행성 간의 분주함을 떨쳐낼 때, 함선은 변신한다.</p>
+                    <p class="mb-4">먼저 <span class="lore-term" data-lore="seriema">세리마</span>호는 날개를 접는다. 그런 다음 오로라의 돛을 펼친다—핵융합 드라이브와 같은 자석으로 생성된 보라색 플라스마 원반으로, 열 차폐막과 브레이크 역할을 한다.</p>
+                    <p class="mb-4">상황은 빠르고 매우 추운 상태에서 빠르고 매우 뜨거운 상태로 변한다.</p>
+                    <p class="mb-4">탄은 핵융합 엔진을 공력 제동 장치로 사용하는 것을 싫어한다. "안전벨트 풀어야겠어," 그가 고집을 부리고, <span class="lore-term" data-lore="sami">사미</span>의 미적지근한 반대에도 불구하고, 그는 나쁜 진동을 느끼기 위해 배를 격벽에 댄다.</p>
+                    <p class="mb-4">그가 아직 이러고 있을 때, <span class="lore-term" data-lore="sami">사미</span>의 문제 탐색기가 경보를 울린다.</p>
+                    <p class="mb-4">"어-오," <span class="lore-term" data-lore="sami">사미</span>가 말한다. "창백한 별이 잡혔어."</p>
+                    <p class="mb-4"><span class="lore-term" data-lore="seriema">세리마</span>호의 관측 망원경이 빛에 고정된다. 그것은 청자색 별로, 시그마의 옅은 대기를 통해 아침 신기루처럼 반짝인다. 그것은 <em>순수한</em> 보라색이어야 한다: 핵융합 불꽃. 하지만 이 빛은 성난 녹색으로 줄무늬가 져 있다. 그것은 애프터버너로 핵융합 토치에 물을 쏟아부은 것이다. 그것은 깨끗한 빛이 아니다. 순수한 빛이 아니다. 그것은 군함이다.</p>
+                    <p class="mb-4">창백한 별. 자유 중대의 순찰선, 아다지아에 자리를 잡고 소테라 자체와 전쟁을 벌이고 있는 선스타 장기주의자들의 순찰선이다.</p>
+                    <p class="mb-4">결국 그들은 <em>죽은</em> 일몰에서 내려오고 있다.</p>
+                    <p class="mb-4">탄은 벽에 기대어 흐느적거린다. <span class="lore-term" data-lore="kav">카브족</span>은 위험이 닥치기 직전에 긴장을 푸는 경향이 있다. "우리를 쫓아오는 건가?"</p>
+                    <p class="mb-4">만약 창백한 별이 그들을 쫓아온다면 매우 나쁠 것이다. 그것은 <span class="lore-term" data-lore="seriema">세리마</span>호를 능가할 수 있는 희망의 빛 전투기 편대를 싣고 있다. 그 눈시오 레이저는 함선의 엔진을 잘라내어 그들을 나쁜 소원처럼 떨어지게 할 수 있다. 그리고 만약 그 함선을 지휘하는 선스타 기사가 그들을 도둑이라고 판단한다면—</p>
+                    <p class="mb-4">하지만 아니다. 창백한 별은 시그마의 반대편으로 이륙하며, 다른 무언가를 쫓고 있다.</p>
+                    <p class="mb-4">"그들이 뭘 박해하든," <span class="lore-term" data-lore="sami">사미</span>가 결론 내린다. "<span class="lore-term" data-lore="metalman">금속인간</span>에게 호의를 베푸는 착한 약탈자 두 명은 아니야."</p>
+                    <p class="mb-4">하지만, <span class="lore-term" data-lore="metalman">금속인간</span>과 이야기하면서, <span class="lore-term" data-lore="sami">사미</span>는 그가 <span class="lore-term" data-lore="pinnacle">피너클</span> 밖, 경제가 선물과 호의로 돌아가지 않는 곳에서 왔다는 강한 느낌을 받는다. 그리고 나니 이것이 정말로 호의였는지 확신이 서지 않는다.</p>
+                    <p class="mb-4">어쩌면 이것은 <em>일</em>일지도 모른다.</p>
+                    <p class="mb-4">아, 뭐. 어쩔 수 없지! <span class="lore-term" data-lore="sami">사미</span>는 머리를 뒤로 젖히고, 손을 깍지 끼고, 스트레칭을 한다. "미인의 행운이지," 그들은 아무도 감탄해 줄 사람이 없는 곳에서 말한다. "날개는 어때?"</p>
+                    <p class="mb-4">"뻣뻣하고, 망가졌고, 더 나은 날을 바라고 있어," 탄이 말한다. "하지만 난 그걸 타고 <span class="lore-term" data-lore="kavaron">카바론</span>까지, 모르드레인 고리를 뚫고 날아갈 거야."</p>
+                    <p class="mb-4">"그럼 날개를 펴고 유령 식민지를 약탈하러 가자."</p>
+                    <p class="mb-4"><span class="lore-term" data-lore="sami">사미</span>는 방열판을 다시 펼치기 시작한다. <span class="lore-term" data-lore="seriema">세리마</span>호가 엔진을 아래로 향한 우주 비행 형태에서 배를 아래로 향한 항공 비행 형태로 전환할 때는 항상 충격적이다. 하지만 그것은 좋은 충격이다. 마치 손으로 땅 짚고 옆으로 도는 것 같다.</p>
+                    <p class="mb-4">유령 식민지를 약탈하라. 그리고 <span class="lore-term" data-lore="metalman">금속인간</span>이 <span class="lore-term" data-lore="sami">사미</span>의 운명을 바꿀 것이라고 생각하는 것이 무엇이든 찾아라.</p>
+                    <p class="mb-4">그가 <span class="lore-term" data-lore="sami">사미</span>에게 찾아오라고 보낸 장치를 뭐라고 불렀더라? 부품? 도구?</p>
+                    <p class="mb-4">아니다. 그는 <em>유물</em>이라고 말했다.</p>
+                    <hr class="my-6">
+                    <p class="mb-4">마침내, <span class="lore-term" data-lore="seriema">세리마</span>호는 날개를 펼치고, 옅은 공기를 잡아, 동쪽에서 식민지를 향해 활강할 만큼 충분히 느리고 낮아졌다.</p>
+                    <p class="mb-4">"아무것도 없어," 탄이 ESM 블록을 확인하며 보고한다. 그것의 임무는 누군가 그들을 쳐다볼 때 알려주는 것이다. "레이더 없어. 비콘 없어. 자동 착륙 없어. 그가 말한 그대로야. 그들은 식민지를 지었지만 아무도 오지 않았어."</p>
+                    <p class="mb-4">"탄," <span class="lore-term" data-lore="sami">사미</span>가 관측 제어 장치에 손을 뻗으며 시작한다. "빛 보여?"</p>
+                    <p class="mb-4">탄은 후방 카메라의 일몰을 쏘아본다. "모르겠는데. 보이나? 정말 빛인가? 저게 일몰이긴 한가? 블랙홀이 동쪽에서 질 때 뭐라고 부르지?"</p>
+                    <p class="mb-4">소테라는 <em>초신성이 될 예정이었다</em>. 자식들의 대기를 날려버리고 방사선으로 구워버릴 예정이었다. 에테르 폭식의 분출로 자신의 가족을 살해할 예정이었다. 그 임박한 재앙이 <span class="lore-term" data-lore="sami">사미</span>가 여기에 있는 이유다. <span class="lore-term" data-lore="kav">카브족</span>과 <span class="lore-term" data-lore="eumidian">유미디안</span>(그들의 종자선이 우연히 이 별을 발견했다)을 제외하고 <em>누구든</em> 여기에 있는 이유다. <span class="lore-term" data-lore="pinnacle">피너클</span>은 영원의 기둥을 세우고 소테라가 <em>죽을</em> 것이기 때문에 소테라를 항성 비행에 개방했다.</p>
+                    <p class="mb-4">모두가 <span class="lore-term" data-lore="drix">드릭스</span>가 최종적인 말을 해주기를 기다렸다: 소테라가 <em>곧</em> 죽을 것이라는 발표. <span class="lore-term" data-lore="drix">드릭스</span>는 항상 죽어가는 별에 온다. 신비로운 마지막 검사를 위해 그들의 황혼 세계를 <span class="lore-term" data-lore="weftwalk">씨실처럼 거닐며</span>.</p>
+                    <p class="mb-4">하지만 <span class="lore-term" data-lore="drix">드릭스</span>는 아무런 신호도 주지 않았다.</p>
+                    <p class="mb-4">소테라는 일종의 종말 붐타운이 되었다. 여기서는 <span class="lore-term" data-lore="mallow">맬로우</span>를 벌 수 있었다—대피를 돕고, 목록 작성을 돕고, 파괴될 것을 탐험하면서. <span class="lore-term" data-lore="kavaron">카바론</span>과 시그마의 퇴적물처럼 목사이트가 풍부한 점토도 있었다.</p>
+                    <p class="mb-4">하지만 그때 <span class="lore-term" data-lore="monoist">모노이스트</span>들이 도착했다. 그들은 나선의 세계, 하늘의 검은 으르렁거림, 아누키를 파고들었다. 소테라의 가장 가까운 자식.</p>
+                    <p class="mb-4">그리고 어느 날, (<span class="lore-term" data-lore="sami">사미</span>가 추측하기로는) 그들이 이전에 구백구십구 번 사용했던 것과 같은 수단으로, 그들은 소테라에게 세카르를 주었다.</p>
+                    <p class="mb-4">그들은 이 별에 대해 다른 운명을 예견했다. 그것은 그들의 사슬에서 천 번째 고리가 될 것이며, <em>추락하는 그분</em>에 대한 천년의 증거이자 다음 영원의 전령이 될 것이었다(완벽한 검은 피부와 흰색 <span class="lore-term" data-lore="monoist">모노이스트</span> 문신, 그리고 손가락을 걸 수 있는 강한 어깨뼈를 가진 구혼자가 한때 <span class="lore-term" data-lore="sami">사미</span>에게 설명했듯이).</p>
+                    <p class="mb-4">그래서, 그들은 별을 죽였다.</p>
+                    <p class="mb-4">이것이 <span class="lore-term" data-lore="seriema">세리마</span>호가 죽은 일몰—일몰이 아닌 것—에서 시그마의 손길로 하강하는 이유다.</p>
+                    <p class="mb-4">소테라는 이제 초공허, 블랙홀 태양이다.</p>
+                    <p class="mb-4">그렇게 <em>아주</em> 검지는 않다. 소테라가 초신성으로 만들려고 하던 모든 유입 가스는 섬뜩한 보라색 빛의 고리로 포획되어, 그것을 삼키는 것에 의해 흥분되어 빛나는 우주 토크를 형성했다. 그 칼라는 여전히 이 안쪽 세계들을 따뜻하게 할 만큼 밝다—<span class="lore-term" data-lore="kavaron">카바론</span>의 온실 작물에 양분을 공급하고, 아다지아의 거울에 반짝이고, 에벤도의 빙하에서 물방울을 녹일 만큼.</p>
+                    <p class="mb-4">지금은, 세계들은 예전처럼 돈다. 하지만 <span class="lore-term" data-lore="monoist">모노이스트</span>들은 소테라를 먹여 살리며, 그들의 어둡고 우뚝 솟은 자식을 키우고 있다. 그 굶주림은 증가하고 있다.</p>
+                    <p class="mb-4">그리고 때때로, <span class="lore-term" data-lore="sami">사미</span>가 그것을 볼 때, 그들은 바닥없는 우물을 본다. 그들과, 탄과, <span class="lore-term" data-lore="seriema">세리마</span>호와, 시그마의 손길과, <span class="lore-term" data-lore="mirri">미리</span>가 모두 떨어지고 있는 구멍을. 별 여행자들이 궤도라고 부르는 좋은 종류의 낙하가 아니라. 끝나는 종류의 낙하.</p>
+                    <p class="mb-4"><span class="lore-term" data-lore="monoist">모노이스트</span>들은 언젠가 이 구멍이 그들의 다른 모든 신성한 공허와 같은 곳으로 이어질 것이라고 말한다. 그리고 그날, 그들은 추락하는 자, <em>추락하는 그분</em>이 마지막 어둠의 가장자리에서 그의 비밀을 전송하는 것을 엿볼 것이라고—</p>
+                    <p class="mb-4">불빛. 그들은 불빛에 대해 무언가 말하고 있었다.</p>
+                    <p class="mb-4">"탄! 앞을 봐!"</p>
+                    <p class="mb-4">"알았어," 탄이 서두르지 않고 말한다. "빛이 보이나? 내가 보는 건—"</p>
+                    <p class="mb-4">카브족이 놀랐을 때 긴장을 푸는 이유는 그들이 더 큰 짐승들(그리고 서로에게)에 의해 내던져지도록 진화했기 때문이다.</p>
+                    <p class="mb-4">탄은 축 늘어지지 않는다. 하지만 그는 분명히 약간 처진다.</p>
+                    <p class="mb-4">"불빛들," 그가 말한다. "식민지 전체가 불 켜져 있어."</p>
+                    <p class="mb-4">창문의 불빛들. 활주로 옆의 불빛들.</p>
+                    <p class="mb-4">프사이머로 쓰인 표지판의 불빛들: 시그마의 손길에 오신 것을 환영합니다—인구 13,879명 플러스 친구와 가족—"크게 파봅시다!"</p>
+                    <div id="sigma-reach-chart" class="my-6"></div>
+                    <p class="mb-4">"<span class="lore-term" data-lore="metalman">금속인간</span>은 여기 아무도 없다고 했어," 탄이 주장한다. "분명히 기억해."</p>
+                    <p class="mb-4">"탄, 내 생각엔, 그리고 여기서 평정심을 잃지 않도록 노력해, <span class="lore-term" data-lore="metalman">금속인간</span>이 거짓말을 했을지도 몰라."</p>
+                    <p class="mb-4">"하지만 비어 있어. 내려오는 길에 영상 찍었잖아." 탄은 안정적인 주의력 스택을 가진 존재가 항상 자신감을 갖는 방식으로 자신감이 있었다. 왜냐하면 단기 기억과 장기 기억 사이에 새는 틈이 없고, 그저 아주 긴 현재만 있기 때문이다.</p>
+                    <p class="mb-4">"다시 해봐," <span class="lore-term" data-lore="sami">사미</span>가 말한다. "어쩌면 지난번엔 다들 실내에 있었을지도 모르지."</p>
+                    <p class="mb-4">탄은 라이더, 밀리미터파 레이더, 함선의 나머지 관측 서커스 전체를 발사한다.</p>
+                    <p class="mb-4">"뜨거워," 그가 보고한다. "나머지 테티스보다 더 뜨거워." 시그마의 손길은 오래전에 마른 해저의 대륙붕 위에 지어졌는데, <span class="lore-term" data-lore="pinnacle">피너클</span>은 이를 <em>테티스</em>라고 부른다. "약 2만 개의 몸체, 플러스 동력과 대기만큼 뜨거워. 가동 중인 핵분열 발전소가 있어."</p>
+                    <p class="mb-4">"공기는?"</p>
+                    <p class="mb-4">"이산화탄소 농도 상승. 약... 2만 명의 산소 호흡 거주자와 일치."</p>
+                    <p class="mb-4">"주택은?"</p>
+                    <p class="mb-4">"이미 알잖아."</p>
+                    <p class="mb-4">"하지만 <em>사람들</em>이 있어?"</p>
+                    <p class="mb-4">아니다. 살아있는 것은 하나도 없다.</p>
+                    <p class="mb-4">돌아온 것은 말이 되지 않는다.</p>
+                    <p class="mb-4">"이거 아주 안 좋은 예감이 들어," 탄이 말한다.</p>
+                    <p class="mb-4">하지만 탄은 <span class="lore-term" data-lore="sami">사미</span>에게 착륙을 중단하라고 요청하지 않는다.</p>
+                    <p class="mb-4">탄은 선택에 대한 특이한 공포증이 있다. 어쩌면 이것이 탄이 다른 모든 사람들이 더 나은 선택을 하고 떠날 때 <span class="lore-term" data-lore="sami">사미</span>와 함께 <span class="lore-term" data-lore="seriema">세리마</span>호에 머무는 이유일지도 모른다. <span class="lore-term" data-lore="sami">사미</span>는 탄이 그냥 자신들을 정말 좋아한다고 생각하는 것을 선호한다.</p>
+                    <p class="mb-4">"여기 아무도 없어야 했어," <span class="lore-term" data-lore="sami">사미</span>가 중얼거린다. "그들은 점토를 채굴하기 위해 식민지를 지었지만, 태양이 폭발할 예정이었어. 그래서 아무도 오지 않았지."</p>
+                    <p class="mb-4">그들은 전방 카메라를 응시한다. 그런 다음 후방 카메라를. 전방: 모든 불이 켜진 텅 빈 식민지. 후방: 빛의 고리가 있는 텅 빈 태양.</p>
+                    <p class="mb-4">그들은 재빨리, 올바른 질문으로 뛰어든다:</p>
+                    <p class="mb-4">"태양은 폭발하지 <em>않았어</em>. 그럼 왜 아무도 여기에 오지 않았지? 왜 일을 시작하지 않았지?"</p>
+                    <p class="mb-4">탄이 배를 긁는다. "내 배를 땅에 대야겠어. 그런 다음에 여기 누가 있는지 말해줄게. 난 항상 <span class="lore-term" data-lore="human">인간</span> 발자국을 느낄 수 있거든."</p>
+                    <p class="mb-4">"알았어." <span class="lore-term" data-lore="sami">사미</span>가 조종간을 잡고, 추진기를 안정된 수동으로 전환한다. "한번 둘러보자. 그리고 얼마나 훔칠 수 있을지 결정하자."</p>
+                    <p class="mb-6">"우리는 훔치는 게 아니야," 탄이 말한다. "우리는 그들에게 약간의 추가 공간을 선물하는 거야."</p>
+                `,
+                choices: [
+                    { text: '한번 둘러보자', target: 'end_of_act1' },
+                    { text: '그 비행 계획 다시 검토할 수 있을까?', target: 'FlightPlan' }
+                ]
+            },
+            'FlightPlan': {
+                title: '비행 계획',
+                content: `
+                    <div class="flight-plan font-mono text-sm">
+                        <p>메시지 수신 (유형 FP/IPI)</p>
+                        <p>피너클 전술 부대 비행 계획서</p>
+                        <p>소테라 보안관청 // 무한 지침 중앙</p>
+                        <br>
+                        <p><strong>제출 함선:</strong> IPVN 세리마 (E7B590CE9DF500)</p>
+                        <p><strong>주 추진기 유형:</strong> 관성 질량 저지 기능이 있는 K-토치</p>
+                        <p><strong>기동 추진기 유형:</strong> 아크 제트, 방열 포일</p>
+                        <p><strong>3차 추진기 유형:</strong> 풀러 세일, 레이저 가능, 1메가톤 등급 (현재 정비 중)</p>
+                        <p><strong>항적 범죄에 대한 담보:</strong> 선체, 승무원 소유물, 승무원 자유</p>
+                        <br>
+                        <p><strong>비행 목적:</strong> 탈출한 애완동물/반려동물 수색 (국내 고양이, 주황색 및 갈색, 놀랐을 때 씨실처럼 걸음, 씨실처럼 걷는 반사의 특이한 범위; 마지막 목격 2,985년; 미리라는 이름에 반응함—때때로)</p>
+                        <br>
+                        <p><strong>추진기 스펙트럼 해시:</strong> <span class="error">[오류: 인증서 만료됨]</span></p>
+                        <p><strong>방열판 스펙트럼 해시:</strong> <span class="error">[오류: 파일 형식 손상됨]</span></p>
+                        <p><strong>원자로 핵분열성 물질 공급:</strong> 9,999 <span class="error">[오류: 단위 지정되지 않음]</span></p>
+                        <p><strong>추진기 핵융합성 물질 공급:</strong> 9,999 <span class="error">[오류: 단위 지정되지 않음]</span></p>
+                        <p><strong>추진제 탱크 용량:</strong> "충분함" <span class="error">[오류: 유효하지 않은 문자열]</span></p>
+                        <p><strong>기타 승무원:</strong> 12명, 생체 신호 첨부됨 <span class="error">[오류: 목록에 있는 한 명 이상의 승무원이 현재 다른 비행 계획에도 등재되어 있음.]</span></p>
+                        <br>
+                        <p><strong>비고:</strong> 또 우리야, 아직도 이러고 있어 – S</p>
+                        <br>
+                        <p><strong>제출 상태:</strong> 자동으로 거부됨 [두 번째 위반]</p>
+                        <p><strong>후속 조치:</strong> 무한 지침에서 보완적인 검사 및 정비를 위해 함선과 승무원을 플래그 지정하십시오.</p>
+                        <br>
+                        <p class="text-center font-bold">...METAR PSOTSIG VALID2900CENT CONDEVOKE NASCSUPVOID 조건 발효 중...</p>
+                    </div>`,
+                choices: [
+                    { text: '이게 거부당하다니, 완벽한데.', target: 'LookForCat' },
+                    { text: '이 투명한 거짓말을 믿을 사람은 없지.', target: 'LookForCat' },
+                    { text: '사실 비행 계획 전체를 읽고 싶진 않았어.', target: 'LookForCat' }
+                ]
+            },
+            'end_of_act1': {
+                title: '1막 1부의 끝',
+                content: `
+                    <p class="mb-4">사미와 타누크는 시그마의 손길에 착륙하여 그곳의 비밀을 파헤치기 시작합니다.</p>
+                    <p class="mb-6 text-lg font-bold text-center text-teal-700">이야기는 2부에서 계속됩니다...</p>`,
+                choices: [
+                    { text: '처음부터 다시 시작하기', target: 'Revision0' }
+                ]
+            }
+        };
+
+        const loreData = {
+            'pinnacle': { title: '피너클', content: '항성 간 여행을 관장하는 조직. 평화, 협력, 상호 번영을 목표로 합니다. 화폐 대신 평판(맬로우) 기반의 경제 시스템을 사용합니다.' },
+            'drix': { title: '드릭스', content: '함선 없이도 항성 간을 이동(씨실처럼 걷기)할 수 있는 고대 종족. 피너클에 FTL 기술의 비밀을 전수하는 대가로, 죽어가는 항성계를 조사할 권리를 얻었습니다.' },
+            'kavaron': { title: '카바론', content: "카브족의 고향 세계. 과도한 채굴로 인해 행성이 두 동강 났으며, '존재하는 카바론'과 파괴된 '이전의 카바론'으로 나뉩니다." },
+            'kav': { title: '카브족', content: '카바론에서 진화한 종족. 모성을 파괴하여 우주로 망명해야 했으며, 새로운 고향을 찾고 있습니다.' },
+            'weftwalk': { title: '씨실처럼 걷기', content: '드릭스 종족이 사용하는 FTL 이동 방식. 기술, 의식, 도구의 조합을 통해 공간을 접어 이동합니다.' },
+            'mallowmass': { title: '맬로우매스', content: "피너클의 경제 시스템. 평판, 상호 교환, 주인과 손님의 의무 등 공공에 기록되는 덕행을 기반으로 합니다." },
+            'mallow': { title: '맬로우', content: "피너클 문명에서 화폐 대신 사용되는 '평판'입니다. 선하고 중요한 일을 완수함으로써 얻을 수 있으며, 이를 통해 더 많은 기회와 신뢰를 얻게 됩니다." },
+            'illvoi': { title: '일보이', content: '가스 거성의 깊은 곳에서 진화한 해파리 형태의 종족. 정신력과 기술을 결합하여 가스를 고체 구조물로 만드는 "구름 조각" 능력을 가졌습니다.' },
+            'eumidian': { title: '유미디안', content: '고대의 테라포밍 종족. 종자선을 통해 여러 세계에 퍼지며, 착륙한 행성을 자신들에게 맞는 환경으로 변화시킵니다.' },
+            'human': { title: '인간', content: '신체적 다양성 대신 문화를 통해 적응하는 종족. 모방 능력이 뛰어나며, 이로 인해 여러 거대 신앙의 주요 구성원이 되었습니다.' },
+            'monoist': { title: '모노이스트', content: "단일한 진리를 숭배하는 거대 신앙. 항성을 인위적으로 붕괴시켜 '초공허'를 만드는 것을 목표로 하며, 이를 통해 예언된 미래(INEVITA)에 도달하려 합니다." },
+            'mirri': { title: '미리', content: '사미의 반려 고양이. 어느 날 놀라서 씨실처럼 걸어 사라졌으며, 사미는 그녀를 찾기 위해 모든 것을 바치고 있습니다.' },
+            'sami': { title: '사미', content: '함선 세리마호의 선장이자 인간. 실종된 고양이 미리를 찾기 위해 범죄에 가까운 일도 마다하지 않습니다.' },
+            'tannuk': { title: '타누크', content: '사미의 동료이자 부조종사인 카브족. 사미에게 끝까지 남아있는 유일한 선원입니다.' },
+            'metalman': { title: '금속인간', content: "피너클 외부에서 온 것으로 추정되는 수수께끼의 인물. 사미에게 시그마의 손길에서 '유물'을 찾아오라는 일을 의뢰합니다." },
+            'seriema': { title: '세리마호', content: '사미와 타누크가 운용하는 낡고 고장 나기 직전의 함선입니다.' },
+            'socients': { title: '소시언트', content: '피너클 회원국에 속한 사람.' },
+            'moxite': { title: '목사이트', content: '항성 간 비행에 동력을 공급하는 희귀한 연료원.' },
+            'sekhar': { title: '세카르', content: '특이점 유도를 유발하는 구슬. 모노이스트가 초공허를 만들거나 다음 영원으로의 여정을 가속하기 위해 사용합니다.' },
+            'wildcat': { title: '와일드캣', content: '대규모 조직에 소속되지 않은 독립 함선 및 선원. 대부분 프리랜서, 밀수업자, 소규모 광부로 활동합니다.' },
+            'anstruth': { title: '안스트루스', content: '신성모독. 합산주의의 대우주조화에 반하는 행위; 반인식론적, 반교리적, 불경한 행위.' },
+            'inevita': { title: '인에비타', content: '모노이스트 사상에 의해 명시된, 약속되고 필연적인 우주의 종말.' },
+            'supervoid': { title: '초공허', content: '특이한 속성을 가진 특이점. 빛을 계속 방출하는 광자 고리를 가지고 있다는 점에서 진정한 블랙홀과 구별됩니다.' }
+        };
+
+        const notationData = {
+            'mem1': {
+                style: 'special-button',
+                content: `테제렛, 당신이 이전에 당신의 출신 항성계는 피너클이나 전통적인 항성 간 여행에 대해 알지 못했다고 말했기에, 피너클 우주에 익숙해지는 데 도움이 될 추가 자료를 확보했습니다. 무한 지침 정거장의 당신 요원들은 아직 당신이 요청한 암호화된 데이터를 작업 중이지만, 피너클이 도착했을 때 마주친 두 소테라 출신 종족에게 제공된 피너클 첫 접촉 문헌을 바탕으로 간략한 보고서를 작성했습니다.`,
+                closeText: '닫기'
+            },
+            'tezzeret1': {
+                style: 'tezz-button',
+                content: `그렇다면 우리는 아이들 이야기의 먹잇감이란 말인가? 좋아, 우리 요원들에게 내 출신에 대한 정보를 조금씩 흘리면서 그걸 이용해 보자. 하지만 음메논, 나는 방출물에는 관심이 없다. 내가 바로 방출물이다. 당신은 혼돈의 벽을 초월할 수 있는 기술에 대한 소문이 있다고 했다. 그게 어디에 있지? 이 씨실과 당신의 영원의 기둥이 눈먼 영원을 건널 수 있다면, 왜 나는 못하는가? 이 장소의 그런 것들에 대한 이해는 뭔가 불완전하다.`,
+                closeText: '닫기'
+            },
+            'tezzeret2': {
+                style: 'tezz-button',
+                content: `당신네 우주의 원시적인 마법 이해는 우리에게 이득이 될 것이다. 당신들은 이 "목사이트"의 잠재력의 표면만 긁었을 뿐이다. 그것은 내 자신의 에테리움과 다르지 않게 마법 에너지로 가득 차 있다. 나는 당신네 사람들이 꿈도 꾸지 못했던 기적을 그것으로 행할 수 있다.`,
+                closeText: '닫기'
+            },
+            'tezzeret3': {
+                style: 'tezz-button',
+                content: `이 마법적으로는 원시적이지만 기술적으로는 발전된 외우주에서 차원 교량과 유사한 것의 개발은 내가 예상하지 못했던 것이다. 어쩌면 이 기술이 혼돈의 벽을 뚫고 다중우주로 돌아갈 수 있는 수단일지도? 음메논, 우리 연락책에게 지침 정거장의 추가 기술 사양을 구해오게 하고, 코드북을 훔쳐라. 그리고 표준 기술 용어 사전도. 당신네 우주의 전문 용어에 질렸다.`,
+                closeText: '닫기'
+            },
+            'tezzeret4': {
+                style: 'tezz-button',
+                content: `한때 내 손바닥 안에서 휘두를 수 있었던 것을 하기 위해 이 모든 자원이라니. 당신들의 모든 발전된 기술적 기량에도 불구하고, 나는 여전히 당신들의 위대한 기술자들을 왜소하게 만든다. 당신들은 바로 눈앞에 도사리고 있는 훨씬 더 큰 힘을 알지 못하는 아이들과 같다.`,
+                closeText: '닫기'
+            },
+            'mem2': {
+                style: 'special-button',
+                content: `엣지의 경제는 피너클 선전이 믿게 하려는 것보다 훨씬 복잡합니다. 우리는 우리 작전에 자금을 댈 충분한 부를 창출할 수 있을 것입니다. 우리는 단지 어디를 봐야 하고 어떻게 시스템을 우리에게 유리하게 조작해야 하는지만 알면 됩니다. 토착 소테라 종족들은 아직 회원국으로 서명하지 않았으며, 이는 우리에게 많은 기회를 제공합니다.`,
+                closeText: '닫기'
+            },
+            'mem3': {
+                style: 'special-button',
+                content: `피너클이 여기서 말하지 않는 것은 고립이라는 암묵적인 위협입니다: 협력하지 않으면 감금될 것이다. 그들은 영원의 기둥을 장악하려는 어떤 시도도 저지할 군사력을 가지고 있으며, 필요하다면 반격을 개시할 수 있는 백 개의 기둥이 더 있습니다. 설령 하나를 장악할 수 있다 해도, 그것들은 본질적으로 일방통행입니다.`,
+                closeText: '닫기'
+            },
+            'mem4': {
+                style: 'special-button',
+                content: `제가 이전에 속했던 조직에 대한 당신의 호기심을 예상하고 아래에 우트로스 조합의 조직과 운영을 요약하여 첨부했습니다. 불행히도, 저는 핵심에 있는 고보안 구역에는 접근할 수 없었습니다.`,
+                closeText: '닫기'
+            },
+            'tezzeret5': {
+                style: 'tezz-button',
+                content: `그건 엔트로피적 죽음의 컬트라고 말하기 위한 많은 단어일 뿐이다. 이 추락하는 자는 진짜인가, 아니면 그들이 소급하여 의미를 부여한 현상일 뿐인가? 음메논, 우리 지역 모노이스트 연락책에게 연락해서 알아낼 수 있는 것을 알아봐라. 나는 신이 되려는 바보들에게는 신물이 난다.`,
+                closeText: '닫기'
+            },
+            'tezzeret6': {
+                style: 'tezz-button',
+                content: `나는 결코 위선적인 바보들로부터 자유로워질 수 없을 것 같다. 그들은 불신자들의 목을 짓밟고 있다. 다중우주에서도, 그리고 명백히 여기에서도 끊임없는 골칫거리다. 죽음의 컬트에 대한 그들의 터널 시야로는, 충분히 쉽게 피할 수 있을 것이다.`,
+                closeText: '닫기'
+            },
+            'tezzeret7': {
+                style: 'tezz-button',
+                content: `음메논, 이 문서는 심각하게 시대에 뒤떨어져 있다. 소테라 초공허는 시스템의 모든 관측창에서 명백히 보이고, 재블린은 시스템 안에 있다. 우리에게 이것을 보낸 현장 요원을 해고해라. 나는 무능을 용납하지 않을 것이다.`,
+                closeText: '닫기'
+            },
+            'tezzeret8': {
+                style: 'tezz-button',
+                content: `음메논, 나는 이 포모리-엘드라지 분쟁에 대한 모든 정보와 엘드라지에 대한 모든 피너클 연구를 즉시 원한다. 다른 모든 임무는 부차적이다. 그 빌어먹을 금고에 대해 오랫동안 나를 피해왔던 해답을 여기서 찾을 수 있을지도 모른다고 생각하니.`,
+                closeText: '닫기'
+            },
+            'mem5': {
+                style: 'special-button',
+                content: `테제렛, 소테라 시스템에 대한 지역 안내서를 첨부합니다. 당신은 이미 이 대부분을 알고 있지만, 새로운 도착자들을 위한 피너클 문서를 숙지하는 것이 나쁘지 않을 것입니다. 시대에 뒤떨어진 자료를 제공한 요원의 해고는 보류했습니다. 그들의 보안 인가로 당신이 보고 싶어할 기밀 서류에 접근할 수 있게 되었습니다. 아래에 첨부했습니다.`,
+                closeText: '닫기'
+            },
+            'tezzeret9': {
+                style: 'tezz-button',
+                content: `좋아. 유용한 도구를 버리는 것은 내키지 않지만, 들어오는 정보가 정확하고 시기적절하도록 더 잘해라. 젠장, 참모 중에 정신감응자가 있었으면 좋겠다.`,
+                closeText: '닫기'
+            }
+        };
+
+        const storyContentEl = document.getElementById('story-content');
+        const lorePanelEl = document.getElementById('lore-panel');
+        const loreTitleEl = document.getElementById('lore-title');
+        const loreBodyEl = document.getElementById('lore-body');
+        const closeLoreBtn = document.getElementById('close-lore-btn');
+        const appContainer = document.getElementById('app-container');
+        const dialogEl = document.getElementById('notation-dialog');
+        const dialogContentEl = document.getElementById('dialog-content');
+
+        let currentChart = null;
+
+        function renderSection(key) {
+            const section = storyData[key];
+            if (!section) return;
+
+            storyContentEl.innerHTML = '';
+
+            const contentWrapper = document.createElement('div');
+            contentWrapper.className = 'content-fade-in';
+
+            if (section.title) {
+                const titleEl = document.createElement('h2');
+                titleEl.className = 'text-2xl font-bold mb-6 border-b pb-2 border-stone-300';
+                titleEl.textContent = section.title;
+                contentWrapper.appendChild(titleEl);
+            }
+
+            const bodyEl = document.createElement('div');
+            bodyEl.innerHTML = section.content;
+            contentWrapper.appendChild(bodyEl);
+
+            if (section.choices && section.choices.length > 0) {
+                const choicesContainer = document.createElement('div');
+                choicesContainer.className = 'mt-8 pt-6 border-t border-stone-300 flex flex-col sm:flex-row flex-wrap gap-4 justify-center';
+                section.choices.forEach(choice => {
+                    const button = document.createElement('button');
+                    button.className = 'choice-button w-full sm:w-auto bg-teal-600 text-white font-bold py-2 px-6 rounded-lg shadow-md hover:bg-teal-700 flex-grow';
+                    button.textContent = `> ${choice.text}`;
+                    button.dataset.target = choice.target;
+                    choicesContainer.appendChild(button);
+                });
+                contentWrapper.appendChild(choicesContainer);
+            }
+
+            storyContentEl.appendChild(contentWrapper);
+
+            if (key === 'LookForCat') {
+                renderSigmaReachChart();
+            }
+        }
+
+        function showNotation(key) {
+            const notation = notationData[key];
+            if (!notation) return;
+
+            let buttonHtml = '';
+            if (key === 'mem5') {
+                buttonHtml = `
+                    <button data-notation-id="tezzeret9" class="tezz-button"><strong>Notation</strong></button>
+                    <button data-dialog-close="true" class="${notation.style}"><strong>${notation.closeText}</strong></button>
+                 `;
+            } else {
+                buttonHtml = `<button data-dialog-close="true" class="${notation.style}"><strong>${notation.closeText}</strong></button>`;
+            }
+
+            dialogContentEl.innerHTML = `
+                <div class="p-6 ${notation.style.includes('tezz') ? 'bg-stone-800 text-stone-200 font-mono' : 'bg-blue-900/95 text-white font-serif'}">
+                    <p class="mb-6">${notation.content}</p>
+                    <div class="text-center space-x-4">
+                        ${buttonHtml}
+                    </div>
+                </div>
+            `;
+            dialogEl.showModal();
+        }
+
+        function renderSigmaReachChart() {
+            const chartContainerDiv = document.getElementById('sigma-reach-chart');
+            if (!chartContainerDiv) return;
+
+            const container = document.createElement('div');
+            container.className = 'chart-container bg-stone-50 p-4 rounded-lg shadow-inner';
+
+            const canvas = document.createElement('canvas');
+            canvas.id = 'sigmaChart';
+            container.appendChild(canvas);
+            chartContainerDiv.appendChild(container);
+
+            const ctx = canvas.getContext('2d');
+
+            if (currentChart) {
+                currentChart.destroy();
+            }
+
+            currentChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['표지판 인구', '열 신호(등가 인원)', '실제 생명체'],
+                    datasets: [{
+                        label: '시그마의 손길: 데이터 불일치',
+                        data: [13879, 20000, 0],
+                        backgroundColor: [
+                            'rgba(59, 130, 246, 0.6)',
+                            'rgba(239, 68, 68, 0.6)',
+                            'rgba(132, 140, 153, 0.6)'
+                        ],
+                        borderColor: [
+                            'rgba(59, 130, 246, 1)',
+                            'rgba(239, 68, 68, 1)',
+                            'rgba(132, 140, 153, 1)'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: { y: { beginAtZero: true } },
+                    plugins: {
+                        legend: { display: false },
+                        title: {
+                            display: true,
+                            text: '시그마의 손길: 데이터 불일치',
+                            font: { size: 16, family: "'Noto Sans KR', sans-serif" },
+                            color: '#1c1917'
+                        },
+                        tooltip: {
+                            titleFont: { family: "'Noto Sans KR', sans-serif" },
+                            bodyFont: { family: "'Noto Sans KR', sans-serif" }
+                        }
+                    }
+                }
+            });
+        }
+
+        function showLore(key) {
+            const lore = loreData[key];
+            if (!lore) return;
+
+            loreTitleEl.textContent = lore.title;
+            loreBodyEl.textContent = lore.content;
+            lorePanelEl.classList.add('is-open');
+            appContainer.style.filter = 'blur(4px)';
+        }
+
+        function hideLore() {
+            lorePanelEl.classList.remove('is-open');
+            appContainer.style.filter = 'none';
+        }
+
+        storyContentEl.addEventListener('click', (e) => {
+            if (e.target.dataset.target) {
+                renderSection(e.target.dataset.target);
+                window.scrollTo(0, 0);
+            } else if (e.target.dataset.lore) {
+                showLore(e.target.dataset.lore);
+            } else if (e.target.dataset.notationId) {
+                showNotation(e.target.dataset.notationId);
+            }
+        });
+
+        dialogEl.addEventListener('click', (e) => {
+            if (e.target.dataset.dialogClose) {
+                dialogEl.close();
+            } else if (e.target.dataset.notationId) {
+                showNotation(e.target.dataset.notationId);
+            }
+        });
+
+        closeLoreBtn.addEventListener('click', hideLore);
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === "Escape") {
+                if (lorePanelEl.classList.contains('is-open')) hideLore();
+                if (dialogEl.open) dialogEl.close();
+            }
+        });
+
+        renderSection('Revision0');
+    </script>
+</body>
+
+</html>
